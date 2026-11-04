@@ -1,0 +1,133 @@
+{
+  "mode": "focus",
+  "selected": "build",
+  "working": false,
+  "tour": {
+    "active": false,
+    "paused": false,
+    "index": 2
+  },
+  "three": "180",
+  "viewMode": "orbit",
+  "floor": "all",
+  "currentZone": "build",
+  "exploring": true,
+  "transitioning": false,
+  "quality": "alta",
+  "dpr": 1,
+  "viewport": [
+    1600,
+    900
+  ],
+  "drawCalls": 42,
+  "triangles": 218514,
+  "sampledFrames": 900,
+  "fps": 59.8,
+  "p95FrameMs": 18.7,
+  "meanSubmitMs": 0.68,
+  "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)",
+  "camera": [
+    -17,
+    6.900000000000002,
+    25
+  ],
+  "target": [
+    -5.2,
+    2.6000000000000005,
+    0.5
+  ],
+  "yaw": -0.4488460584535952,
+  "pitch": -0.1568271578845333,
+  "clippingPlanes": 0,
+  "agents": {
+    "enabled": true,
+    "userEnabled": true,
+    "reducedMotion": false,
+    "paused": false,
+    "rate": 24,
+    "presentation": false,
+    "step": 0,
+    "workflow": null,
+    "updates": 1414,
+    "clock": 49.623,
+    "drawCalls": 3,
+    "actors": [
+      {
+        "name": "MAYA",
+        "zone": "think",
+        "position": [
+          -3,
+          5.07,
+          1.55
+        ],
+        "home": [
+          -3,
+          5.07,
+          1.55
+        ],
+        "walking": false,
+        "footClearance": [
+          0.005,
+          0.005
+        ],
+        "head": [
+          0.01568350209237428,
+          -0.015081249842638722,
+          0
+        ],
+        "activity": 0
+      },
+      {
+        "name": "NOA",
+        "zone": "create",
+        "position": [
+          3,
+          5.07,
+          2.65
+        ],
+        "home": [
+          3,
+          5.07,
+          2.65
+        ],
+        "walking": false,
+        "footClearance": [
+          0.005,
+          0.005
+        ],
+        "head": [
+          0.01221446216366304,
+          -0.08432001182729133,
+          0
+        ],
+        "activity": 0
+      },
+      {
+        "name": "LEO",
+        "zone": "build",
+        "position": [
+          -6.05,
+          0.79,
+          2.8
+        ],
+        "home": [
+          -6.05,
+          0.79,
+          2.8
+        ],
+        "walking": false,
+        "footClearance": [
+          0.005,
+          0.005
+        ],
+        "head": [
+          0.005205338727503478,
+          0.05368392122895556,
+          0
+        ],
+        "activity": 1
+      }
+    ]
+  },
+  "webgl": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+}

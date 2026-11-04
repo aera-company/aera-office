@@ -1,0 +1,146 @@
+{
+  "brand": "AERA",
+  "updated_at": "2026-11-04",
+  "dimension": "4/4 concluída; próxima etapa: síntese 1.5",
+  "answers": {
+    "1.1.A_referencias_estetica": {
+      "resposta": "Mistura de (a) prancha técnica (Pentagram, Collins, Teenage Engineering: grid exposto, tipografia como imagem) com (c) cinema e produto (A24, Nothing, Apple em fundo preto: frames escuros e contrastados, interfaces e objetos em cena). Tiago pediu sugestão de teste inicial.",
+      "proposta_nayra": "Estrutura vem de (a): grid de fios, numeração, rótulos em mono, tipografia grande; a imagem vem de (c): um still cinematográfico por peça, escuro, luz dirigida, objeto ou interface real. Proporção sugerida 60% estrutura, 40% imagem.",
+      "fontes_lidas": [
+        "site aera.company (5 telas em referencias/)",
+        "tokens medidos em referencias/outro-site-tokens.md",
+        "logo-aera.svg"
+      ]
+    },
+    "1.1.B_paleta": {
+      "resposta": "Só preto e marfim, sem cor de destaque. Cor entra apenas pela fotografia.",
+      "valores": {
+        "preto": "#0A0A0A (fundo principal, do site)",
+        "preto_profundo": "#000000 / #0E0E0E (variações do site)",
+        "marfim": "#F1EFE8 (fundo claro, do site)",
+        "texto_sobre_marfim": "#111111",
+        "secundario_sobre_marfim": "rgba(0,0,0,.55)"
+      },
+      "nota": "Semânticas WCAG só para interface, nunca em peça de post; tons derivados (alphas de marfim e preto) calculados na geração."
+    },
+    "1.1.C_tipografia": {
+      "resposta": "Títulos dos posts em sentence case (diferente do site, que usa caixa alta).",
+      "sistema": {
+        "display": "Instrument Sans, peso 650, tracking negativo forte, sentence case",
+        "rotulos": "Archivo, caixa alta, tracking positivo, tamanho pequeno",
+        "tecnico": "Geist Mono para numeração, metadados e textos técnicos"
+      },
+      "fonte": "medido no site aera.company em 04/11"
+    },
+    "1.1.D_logo": {
+      "variantes_recebidas": [
+        "logotipo AERA (SVG, marfim #F3F1EC)",
+        "monograma A: o arco do A do logotipo, sem travessa (PNG 1077x664, transparente, #EAE9E2)",
+        "símbolo estrela: 8 arcos do A apontando para o centro, em rotação de 45° (PNG 1162x1162, transparente, #EAE9E2)"
+      ],
+      "analise": "O sistema nasce de uma forma só, o arco do A, com traço uniforme e terminais arredondados. O monograma é o A isolado; a estrela é o mesmo A repetido oito vezes em volta de um centro, como forças convergindo ou um ponto de partida que irradia. Coerente com \"we make things move\".",
+      "faltam": [
+        "versão escura (preto) de todas as variantes: gerar por troca de cor",
+        "SVG do monograma e da estrela (hoje só PNG)"
+      ],
+      "inconsistencia": "Três marfins diferentes: #F1EFE8 (fundo do site), #F3F1EC (logotipo SVG), #EAE9E2 (símbolos PNG). Recomendação: unificar em #F1EFE8."
+    },
+    "1.1.D2_estrela_uso": {
+      "resposta": "Os dois usos, conforme a peça, com cautela.",
+      "regra_proposta": [
+        "Padrão: assinatura discreta (canto, junto ao logotipo, ou marcador de numeração no grid).",
+        "Uso grande: só em peças tipográficas sem foto (capas de carrossel, anúncios de tema, aberturas), no máximo 1 a cada 4 peças do feed.",
+        "Grande = cortada pela borda, nunca inteira no centro, nunca atrás de foto, nunca colorida, nunca girada fora dos 45°.",
+        "Em movimento: rotação lenta ou abertura dos 8 arcos, nunca pulsando ou quicando."
+      ]
+    },
+    "1.1.E_iconografia": {
+      "proposta": "Ícones e marcadores derivados do traço do A: linha uniforme, pontas arredondadas, ângulos de 45°, sem preenchimento. Nada de ícone de biblioteca. Sem ilustração figurativa."
+    },
+    "1.1.F_grid_formatos": {
+      "proposta": "Grade de fios finos (1 px em 1080) com margem de 64 px, baseline 8 px, raio de canto 0. Formatos: feed 1080x1350, story/reel 1080x1920 com zona livre de 250 px em cima e 340 px embaixo, carrossel 1080x1350, LinkedIn 1200x1500 ou 1080x1350, horizontal 1920x1080."
+    },
+    "1.1.G1_pessoas": {
+      "resposta": "Sem pessoas nas imagens. Só objetos, interfaces, espaços e luz, como stills de filme sem atores.",
+      "consequencia": "Nenhum rosto, mão ou silhueta gerada por IA. Se um dia entrar gente, só fotografia real e autorizada."
+    },
+    "1.1.G2_luz": {
+      "resposta": "Luz quente, de lâmpada: âmbar de fim de tarde ou luminária, ambiente escuro, poça de luz sobre a mesa e o resto em sombra.",
+      "proposta_tecnica": "Temperatura 2700 a 3200 K, uma fonte principal lateral ou de cima, sombras profundas sem preenchimento, preto da imagem casando com #0A0A0A da peça, grão fino de filme, nada de luz chapada ou HDR."
+    },
+    "1.1.G3_cena": {
+      "resposta": "Espaço e arquitetura: salas vazias, corredores, luz atravessando janela e batendo na parede, escadas, volumes. Abstrato e cinematográfico, sobre lugar e clima.",
+      "proposta_tecnica": "Lentes de 35 a 50 mm, câmera na altura do olho ou baixa, composição com muito espaço negativo e uma linha forte (parede, degrau, feixe de luz) que dialoga com os fios do grid da peça. Materiais: concreto, gesso, pedra, madeira escura, vidro. Sem objetos de marca, sem telas falsas."
+    },
+    "1.1.H_anti_referencias": {
+      "resposta": "Confirmada a lista proposta.",
+      "lista": [
+        "Banco de imagem corporativo (escritório claro, aperto de mão, equipe sorrindo).",
+        "Cara de IA (azul e roxo neon, cérebros, circuitos, robôs, partículas).",
+        "3D brilhante genérico (plástico flutuando, cromado, liso demais).",
+        "Celular ou notebook flutuando em fundo colorido; interface só real e dentro de um espaço.",
+        "Peça cheia (muitos elementos, várias cores, ícones de biblioteca, texto em caixa colorida)."
+      ]
+    },
+    "1.1.K_anchor": {
+      "proposta": "Sem personagem recorrente (sem pessoas). Âncora visual = conjunto de espaços de referência aprovados (gerados no teste) + logotipo, monograma e estrela."
+    },
+    "1.1.IJ_video": {
+      "proposta": "Motion herdado do orbe e da estrela: movimentos lentos, ease-out longo (0,6 a 1 s), fade e deslocamento curto; legendas em Instrument Sans sentence case, embaixo, frase inteira, sem animação de palavra a palavra."
+    },
+    "1.4.A_persona": {
+      "resposta": "Quem decide é o fundador ou CEO.",
+      "persona_proposta": {
+        "nome": "Marcelo Andrade (fictício)",
+        "idade": 46,
+        "papel": "fundador e CEO de empresa média (faturamento de R$ 30 a 150 milhões), Rio ou São Paulo, setor variável (indústria, saúde, energia, varejo regional, marca própria)",
+        "momento": "expansão, reposicionamento, novo produto ou sistema interno que não sai do papel",
+        "rotina": "agenda cheia, decide em reuniões curtas, conversa por WhatsApp, lê LinkedIn à noite, ouve podcast de negócios no carro, viaja a trabalho",
+        "quer": "falar com quem pensa e constrói; ver uma primeira versão rápido; um parceiro que entenda o negócio inteiro, não só a marca",
+        "teme": "agência que entrega slide bonito e some; consultoria cara que não executa; fornecedor que precisa de briefing perfeito",
+        "compra": "projetos de 1 a 6 meses e operação contínua (conteúdo, sistemas)"
+      }
+    },
+    "1.4.A2_anti_persona": {
+      "resposta": "Confirmada.",
+      "lista": [
+        "Quem compra peça avulsa pelo menor preço.",
+        "Quem quer a IA como mágica ou promessa.",
+        "Quem terceiriza a decisão (sem dono, comitê infinito, muda direção a cada reunião).",
+        "Quem quer copiar o concorrente."
+      ]
+    },
+    "1.4.B_canais": {
+      "resposta": "Canal principal: Instagram (vitrine estética, ritmo visual, carrosséis, stories de bastidor). LinkedIn como canal de texto mais longo que puxa para o perfil.",
+      "gates": "Publicar sempre com Tiago; imagens só com ok a cada lote (C71); texto aprovado no office."
+    },
+    "1.4.E_filtro": {
+      "resposta": "Confirmado.",
+      "in": [
+        "O método (pensar, criar, construir, operar)",
+        "A primeira versão e o bastidor da construção",
+        "Decisões de projeto (cliente só com ok do Tiago)",
+        "O negócio inteiro (marca, produto, operação)",
+        "IA como ferramenta de trabalho, nunca protagonista"
+      ],
+      "out": [
+        "Notícias e hype de IA e tecnologia",
+        "Motivação, produtividade, frases de efeito",
+        "Política e polêmica",
+        "Datas comemorativas genéricas",
+        "Autopromoção vazia"
+      ],
+      "angulo": "Olhar cada ideia pelo que ela precisa para existir, rodar e crescer."
+    },
+    "1.4.CDFG_propostas": {
+      "carrossel": "Capa tipográfica (gancho), desenvolvimento, fecho com assinatura; 6 a 8 cards.",
+      "cadencia": "Instagram 3 posts por semana + stories de bastidor; LinkedIn 1 texto por semana.",
+      "tipologia": "Campanha: abertura (1), principal (1 a 3), apoio (2 a 4)."
+    }
+  },
+  "pendentes_1_1": [],
+  "ja_decidido_fora_do_briefing": {
+    "2_voz": "Tom curto, seguro, humano, pouco adjetivo; evitar soluções inovadoras, transformador, disruptivo, 360, inglês sem função; português base com inglês como acento (C31); sentence case; sem travessão; IA não é o centro. Fontes: brief do site e 14 fatos confirmados no office.",
+    "3_ferramentas": "JOHN no AERA AI Office: NOA escreve, JOHN faz direção visual e arte; imagens pelo Higgsfield (skills human-image, human-social, human-carrossel); ok do Tiago a cada lote (C68 a C71)."
+  }
+}

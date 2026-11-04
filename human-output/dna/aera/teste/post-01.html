@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Teste DNA · post 01</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400&family=Geist+Mono:wght@400&display=block" rel="stylesheet">
+<style>
+@font-face{font-family:'Instrument Sans';src:url('../../../../node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2') format('woff2');font-weight:400 700;font-display:block}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1350px;background:#0A0A0A;overflow:hidden}
+.post{position:relative;width:1080px;height:1350px;background:#0A0A0A;color:#F1EFE8;font-family:'Instrument Sans',sans-serif}
+.photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 40%}
+/* Fios do grid: margem de 64 px, 1 px a 15% */
+.v{position:absolute;top:0;bottom:0;width:1px;background:rgba(241,239,232,.15)}
+.h{position:absolute;left:64px;right:64px;height:1px;background:rgba(241,239,232,.15)}
+.label{position:absolute;top:64px;left:88px;font-family:'Archivo',sans-serif;font-size:19px;letter-spacing:.16em;text-transform:uppercase;color:rgba(241,239,232,.72)}
+.num{position:absolute;top:62px;right:88px;font-family:'Geist Mono',monospace;font-size:20px;color:rgba(241,239,232,.72)}
+.title{position:absolute;left:88px;right:88px;bottom:196px;font-size:96px;font-weight:650;letter-spacing:-.035em;line-height:.98}
+.foot{position:absolute;left:88px;right:88px;bottom:64px;height:40px;display:flex;justify-content:space-between;align-items:center}
+.foot img.logo{height:30px}
+.foot img.star{height:30px;opacity:.85}
+</style>
+</head>
+<body>
+<div class="post">
+  <img class="photo" src="espaco-01-recorte.png" alt="">
+  <div class="v" style="left:64px"></div>
+  <div class="v" style="right:64px"></div>
+  <div class="h" style="top:120px"></div>
+  <div class="h" style="bottom:136px"></div>
+  <div class="label">AERA · Build</div>
+  <div class="num">01</div>
+  <div class="title">A primeira versão<br>precisa existir</div>
+  <div class="foot">
+    <img class="logo" src="../referencias/logo-aera-marfim.svg" alt="AERA">
+    <img class="star" src="../referencias/logo-simbolo-estrela-marfim.png" alt="">
+  </div>
+</div>
+</body>
+</html>

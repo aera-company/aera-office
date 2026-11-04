@@ -1,0 +1,32 @@
+test_full_http_job_approval_revision_export_and_private_storage (__main__.HTTPTests) ... 127.0.0.1 - - [30/Oct/2026 14:28:36] "POST /api/jobs HTTP/1.1" 201 -
+127.0.0.1 - - [30/Oct/2026 14:28:36] "GET /api/jobs/42b32d27b282404797a8e6c1be7f9d0c HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2026 14:28:36] "POST /api/jobs/42b32d27b282404797a8e6c1be7f9d0c/approve HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2026 14:28:36] "GET /api/jobs/42b32d27b282404797a8e6c1be7f9d0c/export HTTP/1.1" 200 -
+127.0.0.1 - - [30/Oct/2026 14:28:36] code 404, message File not found
+127.0.0.1 - - [30/Oct/2026 14:28:36] "GET /runtime/office.sqlite3 HTTP/1.1" 404 -
+127.0.0.1 - - [30/Oct/2026 14:28:36] "POST /api/jobs/42b32d27b282404797a8e6c1be7f9d0c/revise HTTP/1.1" 200 -
+ok
+test_missing_connection_never_creates_fake_work (__main__.HTTPTests) ... 127.0.0.1 - - [30/Oct/2026 14:28:36] "POST /api/jobs HTTP/1.1" 503 -
+ok
+test_same_origin_and_mutation_headers_are_required (__main__.HTTPTests) ... 127.0.0.1 - - [30/Oct/2026 14:28:37] "POST /api/jobs HTTP/1.1" 403 -
+127.0.0.1 - - [30/Oct/2026 14:28:37] "POST /api/jobs HTTP/1.1" 403 -
+127.0.0.1 - - [30/Oct/2026 14:28:37] "GET /api/status HTTP/1.1" 403 -
+ok
+test_approval_and_revision_keep_previous_delivery (__main__.OperationTests) ... ok
+test_background_operation_does_not_need_browser_polling (__main__.OperationTests) ... ok
+test_cancel_during_provider_call_stops_following_calls (__main__.OperationTests) ... ok
+test_failure_preserves_work_and_resume_skips_completed_calls (__main__.OperationTests) ... ok
+test_idempotent_submission_never_duplicates_job (__main__.OperationTests) ... ok
+test_invalid_dependency_graph_never_reaches_execution (__main__.OperationTests) ... ok
+test_questions_block_specialists_until_answer (__main__.OperationTests) ... ok
+test_real_handoff_contract_and_non_template_delivery (__main__.OperationTests) ... ok
+test_restart_recovers_interrupted_job_without_paid_retry (__main__.OperationTests) ... ok
+test_scheduled_job_waits_until_due (__main__.OperationTests) ... ok
+test_messages_contract_uses_schema_and_server_side_auth (__main__.ProviderContractTests) ... ok
+test_refusal_and_partial_output_never_become_a_delivery (__main__.ProviderContractTests) ... ok
+test_upstream_error_does_not_echo_private_provider_body (__main__.ProviderContractTests) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 1.669s
+
+OK

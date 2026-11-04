@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#10191d" />
+  <meta name="description" content="Explore o AERA AI OFFICE: arquitetura 3D, ambientes e inteligências conectadas. Operação local com IA e revisão de entregas." />
+  <title>AERA AI OFFICE / Um espaço para explorar</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%2310191d'/%3E%3Ctext x='8' y='29' fill='%23eee9df' font-size='28'%3EA%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body class="mode-intro">
+  <div class="fallback" aria-hidden="true"></div>
+  <div id="scene" aria-label="Escritório AERA em 3D. Arraste para orbitar ou use os controles de navegação."></div>
+  <div class="vignette" aria-hidden="true"></div>
+  <header class="header">
+    <a class="brand" href="./" aria-label="AERA, voltar ao edifício"><img src="./assets/aera.svg" alt="AERA" /></a>
+    <div class="header-title">AI Office <span>The living office</span></div>
+    <nav class="header-actions" aria-label="Experiência"><button id="explore">Explorar 3D</button><button id="start-tour">Percurso guiado</button><button id="open-brief" aria-expanded="false" aria-controls="brief-panel">Operação</button></nav>
+    <button type="button" id="nayra-call" class="nayra-call" aria-haspopup="dialog" aria-controls="nayra-stage" title="Ouvir o briefing da NAYRA"><span class="nayra-dot" aria-hidden="true"></span><span class="nayra-name">NAYRA</span><span id="nayra-count" class="nayra-count" hidden></span></button>
+    <button type="button" id="voice-listen" class="voice-listen" data-state="parado" aria-label="Ouvir Oi, NAYRA"><span class="voice-dot" aria-hidden="true"></span><span>ouvindo…</span></button>
+    <button type="button" id="present-toggle" class="present-toggle" aria-pressed="false">Apresentar</button>
+    <span id="present-badge" class="present-badge" hidden>Apresentação · AERA</span>
+    <span class="sim-badge" id="system-mode">IA DESCONECTADA</span>
+  </header>
+  <main>
+    <section class="intro-panel" id="intro">
+      <p class="eyebrow">AERA AI Office · Pavilhão 01</p>
+      <h1>The living<br />office</h1>
+      <p class="intro-axis">Estratégia × Criação × Tecnologia × IA</p>
+      <p>Um edifício de três andares onde ARI recebe o pedido, monta a equipe e traz a entrega para a sua aprovação.</p>
+      <div class="intro-ctas"><button id="enter-office" class="primary">Explorar o escritório <span aria-hidden="true">↗</span></button><button id="intro-tour" class="ghost">Percurso guiado</button></div>
+      <span class="intro-note">3D em tempo real. Escolha seu caminho.</span>
+    </section>
+    <ol class="intro-list" id="intro-list" aria-label="Ambientes do pavilhão">
+      <li><button type="button" data-zone="think"><i>01</i><b>Think</b><small>Estratégia · MAYA</small></button></li>
+      <li><button type="button" data-zone="create"><i>02</i><b>Create</b><small>Criação · NOA</small></button></li>
+      <li><button type="button" data-zone="build"><i>03</i><b>Build</b><small>Tecnologia · LEO</small></button></li>
+      <li><button type="button" data-zone="grow"><i>04</i><b>Grow</b><small>Negócios · NINA</small></button></li>
+      <li><button type="button" data-zone="control"><i>05</i><b>Comando</b><small>Orquestração · ARI</small></button></li>
+    </ol>
+    <nav class="room-strip" id="room-strip" aria-label="Salas do pavilhão">
+      <button type="button" data-zone="think"><img src="./assets/rooms/think.jpg" alt="" loading="lazy" /><span><i>01</i>Think</span></button>
+      <button type="button" data-zone="create"><img src="./assets/rooms/create.jpg" alt="" loading="lazy" /><span><i>02</i>Create</span></button>
+      <button type="button" data-zone="build"><img src="./assets/rooms/build.jpg" alt="" loading="lazy" /><span><i>03</i>Build</span></button>
+      <button type="button" data-zone="grow"><img src="./assets/rooms/grow.jpg" alt="" loading="lazy" /><span><i>04</i>Grow</span></button>
+      <button type="button" data-zone="control"><img src="./assets/rooms/control.jpg" alt="" loading="lazy" /><span><i>05</i>Comando</span></button>
+    </nav>
+    <nav class="floor-rail" aria-label="Pavimentos">
+      <span class="rail-title">O pavilhão</span>
+      <button data-floor="all" aria-pressed="true"><span>↗</span>Edifício</button>
+      <button data-floor="terrace" aria-pressed="false"><span>03</span>Terraço</button>
+      <button data-floor="top" aria-pressed="false"><span>02</span>Comando</button>
+      <button data-floor="upper" aria-pressed="false"><span>01</span>Superior</button>
+      <button data-floor="lower" aria-pressed="false"><span>00</span>Térreo</button>
+    </nav>
+    <div id="scene-labels" aria-label="Ambientes do escritório"></div>
+    <div class="scene-caption"><span id="scene-location">O escritório conectado</span><small id="scene-subtitle">Três pavimentos. Uma operação.</small></div>
+    <section class="right-panel" id="detail-panel" hidden aria-label="Ambiente e especialista" aria-live="polite">
+      <div class="panel-top"><span id="agent-zone">THINK</span><span id="agent-index">01 / 05</span><button id="close-profile" aria-label="Fechar perfil">×</button></div>
+      <h2 id="room-title">Estúdio de estratégia</h2>
+      <p id="room-description">O lugar de organizar perguntas e escolher uma direção.</p>
+      <button id="enter-room" class="enter-room">Entrar no ambiente <span aria-hidden="true">↗</span></button>
+      <div class="agent-heading"><span class="agent-monogram" id="agent-monogram" aria-hidden="true">M</span><div><h3 id="agent-name">MAYA</h3><p id="agent-role">Estratégia & inteligência</p></div><span class="agent-concept">papel<br />de IA</span></div>
+      <div id="agent-switch" class="agent-switch" role="group" aria-label="Quem mostrar no Create" hidden><button type="button" data-person="NOA" aria-pressed="true">NOA · texto</button><button type="button" data-person="JOHN" aria-pressed="false">JOHN · arte</button></div>
+      <p id="agent-description"></p>
+      <p id="agent-state" class="agent-state"></p>
+      <section id="agent-activity" class="agent-activity" hidden aria-label="Atividade do personagem">
+        <p id="agent-client" class="agent-client"></p>
+        <div id="agent-numbers" class="team-numbers"></div>
+        <ol id="agent-log" class="team-log"></ol>
+        <button type="button" id="agent-card">Ver card de atividade <span aria-hidden="true">↗</span></button>
+      </section>
+      <div class="station-list" id="station-list" aria-label="Estações desta sala"></div>
+      <section id="station-ficha" class="station-ficha" hidden aria-live="polite">
+        <div class="station-ficha-head"><strong id="station-name"></strong><small id="station-state"></small></div>
+        <p id="station-does"></p>
+        <p class="station-io"><span>Entra</span><em id="station-inputs"></em></p>
+        <p class="station-io"><span>Sai</span><em id="station-output"></em></p>
+        <div class="station-ask"><code id="station-ask"></code><button type="button" id="station-copy">Copiar</button></div>
+        <p id="station-methods" class="station-meta"></p>
+        <p id="station-jobs" class="station-meta"></p>
+        <p id="station-note" class="station-meta" hidden></p>
+      </section>
+      <section id="comando" class="comando" hidden><span class="comando-title">Comando · jobs que ARI conhece</span><div id="comando-list"></div></section>
+      <div class="agent-delivery"><span>Contribuição no fluxo</span><p id="agent-delivery"></p></div>
+      <button class="agent-action" id="agent-activate">Levar um briefing <span aria-hidden="true">↗</span></button>
+    </section>
+    <section class="tour-caption" id="tour-caption" hidden aria-live="polite"><span id="tour-phase"></span><h2 id="tour-message"></h2><p id="tour-copy"></p></section>
+    <div class="tour-controls" id="tour-controls" hidden><span id="tour-count">01 / 07</span><button id="tour-prev" aria-label="Etapa anterior">←</button><button id="tour-pause">Pausar</button><button id="tour-next" aria-label="Próxima etapa">→</button><button id="tour-stop">Sair do percurso</button><div class="tour-progress"><span id="tour-progress"></span></div></div>
+    <div class="walk-hint" id="walk-hint" hidden><strong>Você está no escritório.</strong><span>Arraste para olhar · W A S D para caminhar<br />Use os pavimentos para subir ou descer.</span></div>
+    <nav class="walk-controls" id="walk-controls" hidden aria-label="Caminhar pelo ambiente">
+      <button data-move="forward" aria-label="Caminhar para frente">↑</button><button data-move="turnLeft" aria-label="Olhar para a esquerda">↶</button><button data-move="backward" aria-label="Caminhar para trás">↓</button><button data-move="turnRight" aria-label="Olhar para a direita">↷</button>
+    </nav>
+    <aside class="mini-map" id="mini-map" hidden aria-label="Mapa de localização no pavimento"><div><span id="map-floor">Pavimento térreo</span><span>Você está aqui</span></div><svg viewBox="0 0 220 135" role="img" aria-label="Planta esquemática do escritório"><rect class="map-shell" x="9" y="8" width="202" height="118" rx="2"/><path d="M110 8V90 M9 70H83 M137 70H211"/><text x="50" y="43" id="map-left">BUILD</text><text x="166" y="43" id="map-right">GROW</text><circle cx="110" cy="86" r="15"/><g id="map-marker"><path d="M-6 5L0-10L6 5Z"/><circle r="3"/></g></svg><button id="leave-interior">Voltar ao edifício <span aria-hidden="true">↗</span></button></aside>
+  </main>
+  <div class="scene-tools" aria-label="Controles 3D"><span id="navigation-hint">Arraste para orbitar · Role para aproximar</span><div class="tool-group"><button id="enter-view">Entrar no espaço</button><button id="reset-camera" aria-label="Restaurar visão geral" title="Visão geral">↺</button><button id="zoom-out" aria-label="Afastar câmera">−</button><button id="zoom-in" aria-label="Aproximar câmera">+</button><button id="agent-motion" aria-pressed="true">Agentes animados</button><button id="quality" aria-pressed="false">Qualidade: alta</button><button id="fullscreen" aria-label="Alternar tela cheia">⛶</button></div></div>
+  <nav class="department-dock" aria-label="Explorar departamentos">
+    <button data-zone="all" class="zone-button selected" aria-pressed="true"><span class="num">↗</span><span>Visão geral</span></button>
+    <button data-zone="think" class="zone-button" aria-pressed="false"><span class="num">01</span><span>THINK<small>Estratégia</small></span></button>
+    <button data-zone="create" class="zone-button" aria-pressed="false"><span class="num">02</span><span>CREATE<small>Criação</small></span></button>
+    <button data-zone="build" class="zone-button" aria-pressed="false"><span class="num">03</span><span>BUILD<small>Tecnologia</small></span></button>
+    <button data-zone="grow" class="zone-button" aria-pressed="false"><span class="num">04</span><span>GROW<small>Negócios</small></span></button>
+    <button data-zone="control" class="zone-button" aria-pressed="false"><span class="num">05</span><span>COMANDO<small>Orquestração</small></span></button>
+  </nav>
+  <section class="command operations-panel" id="brief-panel" hidden aria-label="Operação AERA">
+    <div class="ops-header"><div><span class="eyebrow">O trabalho acontece aqui</span><h2>Operação AERA</h2></div><button id="ops-close" aria-label="Fechar operação">×</button></div>
+    <button id="ops-connect-open" class="ops-connection"><span id="ops-connection-label">Conectar Claude</span><span aria-hidden="true">↗</span></button>
+    <p id="ops-credentials-state" class="ops-muted">Verificando o serviço local…</p>
+    <p id="ops-fixture" class="ops-fixture" hidden>TRANSPORTE DE TESTE · Não há IA real neste ambiente de validação.</p>
+    <div class="ops-tabs" role="tablist" aria-label="Operação"><button id="ops-tab-new" role="tab" aria-selected="true" aria-controls="ops-new">Novo pedido</button><button id="ops-tab-jobs" role="tab" aria-selected="false" aria-controls="ops-jobs">Trabalhos <span id="ops-job-count">0</span></button><button id="ops-tab-team" role="tab" aria-selected="false" aria-controls="ops-team-panel">Equipe</button><button id="ops-tab-caps" role="tab" aria-selected="false" aria-controls="ops-caps">Capacidades <span>⌘K</span></button></div>
+    <div id="ops-summary" class="ops-summary" hidden></div>
+    <p id="ops-notice" role="status" class="ops-notice">Conecte a IA para transformar um pedido em entregas.</p>
+    <section id="ops-new" role="tabpanel" aria-labelledby="ops-tab-new">
+      <section class="ops-client" id="ops-client" aria-label="Cliente e projeto">
+        <div class="ops-client-row"><label for="ops-client-select">Cliente</label><select id="ops-client-select"><option value="">Sem cliente · pedido solto</option></select><button type="button" id="ops-client-new" class="ops-text-button">Cadastrar cliente</button></div>
+        <div class="ops-client-row"><label for="ops-project-select">Projeto</label><select id="ops-project-select" disabled><option value="">Todo o cliente</option></select><button type="button" id="ops-project-new" class="ops-text-button" hidden>Novo projeto</button></div>
+        <details class="ops-reference ops-known" id="ops-known" hidden><summary>O que ARI já sabe <span id="ops-known-count"></span></summary><div id="ops-known-body"></div><button type="button" id="ops-client-open" class="ops-text-button">Abrir cadastro ↗</button></details>
+      </section>
+      <form id="ops-form">
+        <label for="ops-job-type">Job</label>
+        <select id="ops-job-type" class="ops-select"><option value="pedido">Pedido livre</option><option value="conteudo-semana">Conteúdo da semana</option></select>
+        <p id="ops-job-help" class="ops-muted">ARI monta de 1 a 4 tarefas e reúne uma entrega em texto para sua revisão.</p>
+        <label for="ops-brief">O que você precisa colocar em movimento?</label>
+        <textarea id="ops-brief" rows="5" maxlength="6000" required placeholder="Descreva a entrega, o público, o objetivo e o que já sabemos."></textarea>
+        <button type="button" id="ops-example" class="ops-text-button">Preencher um exemplo de pedido</button>
+        <details class="ops-reference"><summary>Contexto e referências</summary><label for="ops-context">Fatos, limites e materiais do projeto</label><textarea id="ops-context" rows="5" maxlength="16000" placeholder="Cole as informações que os especialistas devem usar. Não inclua senhas ou chaves."></textarea></details>
+        <details class="ops-reference"><summary>Executar depois</summary><label for="ops-schedule">Horário neste computador (opcional)</label><input id="ops-schedule" type="datetime-local" /><p class="ops-muted">O serviço local precisa permanecer em execução. O pedido só é enviado à IA no horário escolhido.</p></details>
+        <button class="primary ops-send" id="ops-send" type="submit" disabled>Enviar a ARI <span aria-hidden="true">↗</span></button>
+        <p class="ops-muted">ARI planeja ou pede informações. Os especialistas recebem tarefas, e a entrega fica para sua revisão. Cada rodada usa sua API Claude, com até 6 chamadas limitadas.</p>
+      </form>
+    </section>
+    <section id="ops-jobs" role="tabpanel" aria-labelledby="ops-tab-jobs" hidden>
+      <div id="ops-job-list" class="ops-job-list"></div>
+      <p id="ops-empty-selection" class="ops-muted">Selecione um trabalho para acompanhar a execução ou revisar uma entrega.</p>
+      <section id="ops-selected" hidden>
+        <div class="ops-selected-heading"><span id="ops-selected-status" class="ops-state"></span><h3 id="ops-selected-title"></h3></div>
+        <div class="ops-follow-row"><label class="ops-follow"><input id="ops-follow" type="checkbox" checked />Seguir a execução no edifício</label><button type="button" id="ops-replay" hidden>Reproduzir no edifício ↗</button></div>
+        <div id="ops-org" class="ops-org" aria-label="Quem está fazendo o quê neste trabalho"></div>
+        <p id="ops-plan-summary" class="ops-plan" hidden></p>
+        <p id="ops-job-error" class="ops-error" hidden></p>
+        <p id="ops-session-note" class="ops-session-note" hidden></p>
+        <div id="ops-batches" hidden></div>
+        <form id="ops-question-form" class="ops-question-form" hidden><h4>ARI precisa saber</h4><ol id="ops-questions"></ol><label for="ops-answer">Suas respostas</label><textarea id="ops-answer" maxlength="6000" rows="4" required></textarea><button type="submit" class="primary">Responder e continuar <span aria-hidden="true">↗</span></button></form>
+        <section id="ops-estimate" class="ops-estimate" hidden><h4>Estimativa de custo</h4><p id="ops-estimate-text"></p><p class="ops-muted">Ordem de grandeza. O custo real fica registrado ao lado depois da rodada. Nada é chamado antes da sua confirmação.</p><button id="ops-estimate-confirm" class="primary">Confirmar e rodar <span aria-hidden="true">↗</span></button></section>
+        <div id="ops-tasks" class="ops-tasks"></div>
+        <section id="ops-cards-section" class="ops-cards-section" hidden>
+          <div id="ops-pauta-wrap" hidden><h4>Pauta da semana</h4><p class="ops-muted">Informação, não aprovação. Cada post vira um cartão abaixo.</p><ol id="ops-pauta" class="ops-pauta"></ol></div>
+          <div id="ops-cards" class="ops-cards"></div>
+          <div id="ops-images-pending" class="ops-images-pending" hidden><span id="ops-images-pending-text"></span><button type="button" id="ops-images-generate">Gerar imagens pendentes ↗</button></div>
+        </section>
+        <div class="ops-job-actions"><button id="ops-cancel" hidden>Cancelar trabalho</button><button id="ops-resume" hidden>Retomar etapa</button></div>
+        <p id="ops-resume-help" class="ops-muted" hidden>As contribuições concluídas serão reutilizadas. Uma etapa interrompida pode gerar nova chamada à API.</p>
+        <section id="ops-delivery" class="ops-delivery" hidden>
+          <div class="ops-delivery-heading"><h4>Entrega reunida</h4><span id="ops-delivery-version"></span></div>
+          <p id="ops-delivery-awaiting" class="ops-muted">Conteúdo gerado a partir deste pedido. Revise antes de usar.</p>
+          <p id="ops-approved-note" class="ops-approved" hidden>Entrega aprovada e registrada. Nenhuma publicação externa foi executada.</p>
+          <pre id="ops-delivery-text" class="ops-delivery-text"></pre>
+          <div class="ops-delivery-actions"><button id="ops-approve" class="primary">Aprovar entrega ✓</button><a id="ops-export" href="#">Baixar .md ↗</a></div>
+          <form id="ops-revise-form"><label for="ops-revision">O que deve mudar?</label><textarea id="ops-revision" maxlength="4000" rows="3" required placeholder="Peça um ajuste concreto. As versões anteriores serão preservadas."></textarea><button type="submit">Solicitar ajuste ↗</button></form>
+          <details class="ops-history"><summary>Histórico de versões</summary><div id="ops-versions"></div></details>
+        </section>
+        <details class="ops-history"><summary>Registro da operação</summary><ol id="ops-events"></ol></details>
+      </section>
+    </section>
+    <section id="ops-team-panel" role="tabpanel" aria-labelledby="ops-tab-team" hidden>
+      <p class="ops-muted">Estado derivado da conexão e das tarefas em execução. O registro vem dos eventos do servidor; nenhuma linha aqui é inventada.</p>
+      <div id="ops-team" class="ops-team"></div>
+    </section>
+    <section id="ops-caps" role="tabpanel" aria-labelledby="ops-tab-caps" hidden>
+      <input id="ops-caps-search" class="ops-select" type="search" placeholder="Buscar estação, job, personagem ou frase para pedir…" aria-label="Buscar capacidades" />
+      <p class="ops-muted">O mesmo registro que o prédio usa. "Método disponível" significa conhecimento carregado; só "de prontidão" e "em tarefa" têm executor conectado.</p>
+      <div id="ops-caps-list" class="ops-caps-list"></div>
+    </section>
+  </section>
+  <dialog id="connection-dialog" aria-labelledby="ops-connection-title">
+    <div class="ops-header"><div><span class="eyebrow">Conexão da operação</span><h2 id="ops-connection-title">Conectar Claude</h2></div><button id="ops-connect-close" aria-label="Fechar conexão">×</button></div>
+    <form id="ops-connect-form"><select id="ops-source" hidden aria-label="Conexão própria AERA"><option value="aera">Conexão própria AERA</option></select><div id="ops-key-row"><label for="ops-key">Chave de API Anthropic</label><input id="ops-key" type="password" autocomplete="off" spellcheck="false" placeholder="Insira aqui, nunca pelo chat" /></div><p id="ops-source-help" class="ops-muted"></p><p class="ops-muted">Use uma chave da sua conta de API Anthropic. <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Acessar minhas chaves ↗</a></p><p class="ops-muted">A conexão verifica o acesso ao modelo. A geração é cobrada pela API somente quando você envia ou agenda um trabalho.</p><button id="ops-connect-submit" type="submit" class="primary">Conectar</button><button id="ops-disconnect" type="button" hidden>Desconectar deste escritório</button></form>
+    <section class="ops-image-connection"><h3>Executor de imagem</h3><p id="ops-image-state" class="ops-muted"></p><p class="ops-muted">Magnific via MCP, com login no navegador (OAuth). O escritório guarda só o token de renovação no Chaves do macOS. Cada imagem consome créditos da sua conta Magnific.</p><button id="ops-image-connect" type="button">Conectar Magnific ↗</button><button id="ops-image-disconnect" type="button" hidden>Desconectar imagem</button></section>
+    <p id="ops-connect-notice" class="ops-notice" role="status"></p>
+  </dialog>
+  <dialog id="client-dialog" class="client-dialog" aria-labelledby="client-title">
+    <div class="ops-header"><div><span class="eyebrow">Cadastro de cliente</span><h2 id="client-title">Cadastrar cliente</h2></div><button id="client-close" type="button" aria-label="Fechar cadastro">×</button></div>
+    <p id="client-notice" class="ops-notice" role="status"></p>
+    <form id="client-create-form" class="client-create">
+      <label for="client-name">Nome do cliente</label><input id="client-name" maxlength="120" required placeholder="AERA" />
+      <label for="client-site">Site (opcional)</label><input id="client-site" type="url" maxlength="2000" placeholder="https://aera.company" />
+      <p class="ops-muted">O servidor lê a página pública, sem JavaScript nem login, e guarda o texto com data. O que não puder ser lido fica registrado como não lido.</p>
+      <button class="primary" type="submit">Criar e ler o site <span aria-hidden="true">↗</span></button>
+    </form>
+    <div id="client-existing" hidden>
+      <div class="client-columns">
+        <section>
+          <h3>Materiais</h3>
+          <div id="client-materials" class="client-materials"></div>
+          <form id="client-material-form" class="client-inline-form">
+            <div class="client-inline-row"><select id="client-material-kind" aria-label="Tipo de material"><option value="link">Link</option><option value="texto">Texto colado</option></select><input id="client-material-name" maxlength="200" placeholder="Nome (opcional)" /></div>
+            <textarea id="client-material-value" rows="2" maxlength="60000" placeholder="Cole um link https ou um texto"></textarea>
+            <button type="submit">Adicionar material</button>
+          </form>
+          <h3>Projetos</h3>
+          <ul id="client-projects" class="client-projects"></ul>
+          <form id="client-project-form" class="client-inline-form"><div class="client-inline-row"><input id="client-project-name" maxlength="120" placeholder="Conteúdo da semana" /><button type="submit">Criar projeto</button></div></form>
+        </section>
+        <section>
+          <h3>O que ARI sabe</h3>
+          <div class="client-propose"><label for="client-hint">O que você conta sobre este cliente (opcional)</label><textarea id="client-hint" rows="3" maxlength="4000" placeholder="Fale como falaria com a equipe. ARI junta isso ao site."></textarea><button type="button" id="client-propose">Pedir a ARI a proposta de cadastro ↗</button><p id="client-propose-help" class="ops-muted"></p></div>
+          <div id="client-notes" class="client-notes"></div>
+          <form id="client-fact-form" class="client-inline-form"><div class="client-inline-row"><select id="client-fact-kind" aria-label="Tipo"><option value="fato">Fato</option><option value="preferencia">Preferência</option><option value="decisao">Decisão</option></select><input id="client-fact" maxlength="1200" placeholder="Adicionar um fato confirmado" /><button type="submit">Adicionar</button></div></form>
+        </section>
+      </div>
+    </div>
+  </dialog>
+  <section id="nayra-live" class="nayra-live" hidden aria-live="polite" aria-label="Conversa com a NAYRA">
+    <div class="nayra-live-orb" id="nayra-live-orb" aria-hidden="true"><span class="ring"></span><span class="core"></span></div>
+    <div class="nayra-live-text"><small>NAYRA · diga "obrigado, NAYRA" para encerrar</small><p id="nayra-live-caption" data-who="nayra"></p><p id="nayra-live-note" class="nayra-live-note" hidden></p></div>
+    <button type="button" id="nayra-live-end" aria-label="Encerrar conversa">Encerrar</button>
+  </section>
+  <aside id="nayra-live-card" class="nayra-live-card" aria-live="polite"></aside>
+  <section id="nayra-stage" class="nayra-stage" hidden role="dialog" aria-modal="true" aria-labelledby="nayra-title">
+    <div class="nayra-voice">
+      <div class="nayra-orb" id="nayra-orb" aria-hidden="true"><span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span><span class="core"></span></div>
+      <p class="nayra-label" id="nayra-title">NAYRA · briefing do escritório</p>
+      <p class="nayra-caption" id="nayra-caption" aria-live="polite"></p>
+      <p class="nayra-note" id="nayra-note"></p>
+      <div class="nayra-controls"><button type="button" id="nayra-replay">Ouvir de novo</button><button type="button" id="nayra-close">Fechar <span aria-hidden="true">esc</span></button></div>
+    </div>
+    <ol class="nayra-cards" id="nayra-cards" aria-label="Itens do briefing"></ol>
+  </section>
+  <div id="loading" role="status"><span class="loading-line"></span><p>Preparando o pavilhão<span>Um espaço para explorar.</span></p></div>
+  <div id="fallback-notice" role="status" hidden><strong>Modo visual</strong><span id="fallback-reason"></span><a href="./presentation/index.html">Abrir registros offline ↗</a></div>
+  <footer><span>© AERA / We make things move.</span><span id="render-status">Arquitetura em tempo real</span><a href="./presentation/index.html">Registros offline ↗</a></footer>
+  <script type="module" src="./app.js"></script>
+</body></html>

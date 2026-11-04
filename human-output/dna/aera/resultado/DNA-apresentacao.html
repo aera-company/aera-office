@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>DNA criativo · AERA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500&family=Geist+Mono:wght@400&display=block" rel="stylesheet">
+<style>
+@font-face{font-family:'Instrument Sans';src:url('../../../../node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2') format('woff2');font-weight:400 700;font-display:block}
+@font-face{font-family:'Instrument Sans';src:url('../../../../node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-ext-wght-normal.woff2') format('woff2');font-weight:400 700;font-display:block;unicode-range:U+0100-024F}
+:root{--k:#0A0A0A;--i:#F1EFE8;--g:#111111;--i70:rgba(241,239,232,.7);--i40:rgba(241,239,232,.4);--i15:rgba(241,239,232,.15);--g55:rgba(0,0,0,.55);--g15:rgba(0,0,0,.15);
+  --sans:'Instrument Sans',sans-serif;--label:'Archivo',sans-serif;--mono:'Geist Mono',ui-monospace,monospace}
+@page{size:1920px 1080px;margin:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html,body{background:var(--k)}
+body{font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.s{width:1920px;height:1080px;position:relative;overflow:hidden;page-break-after:always;break-after:page;background:var(--k);color:var(--i);padding:96px 120px}
+.s.light{background:var(--i);color:var(--g)}
+/* grid de fios */
+.s::before{content:'';position:absolute;inset:64px;border-left:1px solid var(--i15);border-right:1px solid var(--i15);pointer-events:none}
+.s.light::before{border-color:var(--g15)}
+.meta{position:absolute;left:120px;right:120px;top:64px;height:48px;display:flex;justify-content:space-between;align-items:center;font-family:var(--label);font-size:15px;letter-spacing:.16em;text-transform:uppercase;color:var(--i40)}
+.light .meta{color:var(--g55)}
+.foot{position:absolute;left:120px;right:120px;bottom:52px;display:flex;justify-content:space-between;align-items:flex-end;font-family:var(--mono);font-size:15px;color:var(--i40)}
+.light .foot{color:var(--g55)}
+.foot img{height:22px}
+h1{font-weight:650;letter-spacing:-.045em;line-height:.95}
+h2{font-weight:650;font-size:88px;letter-spacing:-.04em;line-height:1}
+h3{font-weight:600;font-size:34px;letter-spacing:-.02em;line-height:1.15}
+p{font-size:28px;line-height:1.45;letter-spacing:-.005em}
+.lede{font-size:34px;line-height:1.4;max-width:1180px;color:var(--i70)}
+.light .lede{color:var(--g55)}
+.lab{font-family:var(--label);font-size:15px;letter-spacing:.16em;text-transform:uppercase;color:var(--i40)}
+.light .lab{color:var(--g55)}
+.mono{font-family:var(--mono);font-size:18px}
+.rule{border-top:1px solid var(--i15)}
+.light .rule{border-color:var(--g15)}
+.cols{display:grid;gap:56px}
+.num{font-family:var(--mono);font-size:16px;color:var(--i40)}
+.light .num{color:var(--g55)}
+.item{padding:22px 0;border-top:1px solid var(--i15);display:grid;grid-template-columns:72px 1fr;gap:20px;align-items:baseline}
+.light .item{border-color:var(--g15)}
+.item p{font-size:26px}
+.item strong{font-weight:600}
+.body{position:absolute;left:120px;right:120px;top:160px;bottom:140px}
+img.fit{width:100%;height:100%;object-fit:cover;display:block}
+.cap{font-family:var(--mono);font-size:15px;color:var(--i40);margin-top:12px}
+.light .cap{color:var(--g55)}
+.swatch{height:220px;display:flex;flex-direction:column;justify-content:flex-end;padding:20px}
+.tbl{width:100%;border-collapse:collapse;font-size:22px}
+.tbl td,.tbl th{padding:14px 12px 14px 0;border-top:1px solid var(--i15);text-align:left;vertical-align:top}
+.light .tbl td,.light .tbl th{border-color:var(--g15)}
+.tbl th{font-family:var(--label);font-size:14px;letter-spacing:.14em;text-transform:uppercase;font-weight:400;color:var(--i40)}
+.light .tbl th{color:var(--g55)}
+.star-bleed{position:absolute;opacity:1}
+</style>
+</head>
+<body>
+
+<!-- 01 capa -->
+<section class="s">
+  <div class="meta"><span>AERA · DNA criativo</span><span class="mono">v1.1 · 04/11/2026</span></div>
+  <img class="star-bleed" src="../referencias/logo-simbolo-estrela-marfim.png" style="width:1000px;right:-360px;top:150px;opacity:.9">
+  <div style="position:absolute;left:120px;bottom:180px;width:1100px">
+    <img src="../referencias/logo-aera-marfim.svg" style="height:58px;margin-bottom:64px">
+    <h1 style="font-size:150px">O espaço antes<br>da coisa.</h1>
+    <p class="lede" style="margin-top:40px;max-width:900px">O sistema visual e verbal da AERA para o AI Office: como o JOHN, a NOA e qualquer IA devem fazer uma peça parecer da mesma mão.</p>
+  </div>
+  <div class="foot"><span>Estratégia, criação, tecnologia e IA</span><span>01</span></div>
+</section>
+
+<!-- 02 fontes analisadas -->
+<section class="s light">
+  <div class="meta"><span>Fontes estudadas</span><span>02</span></div>
+  <div class="body" style="display:grid;grid-template-columns:620px 1fr;gap:96px">
+    <div>
+      <h2>O que foi lido para escrever este DNA.</h2>
+      <p class="lede" style="margin-top:36px;font-size:28px">Cada decisão deste documento vem de uma fonte. O que não foi analisado aparece como lacuna, sem invenção.</p>
+    </div>
+    <table class="tbl" style="align-self:center">
+      <tr><th style="width:280px">Fonte</th><th style="width:190px">Situação</th><th>Achado principal</th></tr>
+      <tr><td>Site aera.company</td><td>Lido inteiro</td><td>Método numerado, preto e marfim, grid exposto, imagens quentes.</td></tr>
+      <tr><td>Cores e fontes do site</td><td>Medidas</td><td>#0A0A0A, #F1EFE8, Instrument Sans, Archivo, Geist Mono.</td></tr>
+      <tr><td>Brief do site</td><td>Lido</td><td>Tom curto, seguro, humano; palavras a evitar.</td></tr>
+      <tr><td>Fatos confirmados</td><td>14 fatos</td><td>Confirmados pelo Tiago no cadastro do AI Office.</td></tr>
+      <tr><td>Logotipo e símbolos</td><td>3 peças</td><td>Logotipo, monograma A e estrela, todos do arco do A.</td></tr>
+      <tr><td>Briefing com o Tiago</td><td>15 decisões</td><td>Direção, cor, caixa, imagem, audiência e temas.</td></tr>
+      <tr><td>Instagram e LinkedIn</td><td>Não lidos</td><td>Lacuna desta rodada.</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span>Rastreabilidade: cada regra tem origem</span><img src="../referencias/logo-aera-preto.svg"></div>
+</section>
+
+<!-- 03 galeria do site -->
+<section class="s">
+  <div class="meta"><span>Prova visual · o site como ele é</span><span>03</span></div>
+  <div class="body" style="display:grid;grid-template-columns:1.25fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:24px">
+    <figure style="grid-row:1/3"><div style="height:680px"><img class="fit" src="../referencias/visual-site-hero.jpg"></div><figcaption class="cap">01 · Abertura: a frase vira imagem, o resto é silêncio.</figcaption></figure>
+    <figure><div style="height:290px"><img class="fit" src="../referencias/visual-site-think.jpg"></div><figcaption class="cap">02 · Think sobre marfim.</figcaption></figure>
+    <figure><div style="height:290px"><img class="fit" src="../referencias/visual-site-build.jpg"></div><figcaption class="cap">03 · Build com interface real.</figcaption></figure>
+    <figure><div style="height:290px"><img class="fit" src="../referencias/visual-site-cases.jpg" style="object-position:top"></div><figcaption class="cap">04 · Cases com luz quente.</figcaption></figure>
+    <figure><div style="height:290px"><img class="fit" src="../referencias/visual-site-about.jpg"></div><figcaption class="cap">05 · Manifesto numerado.</figcaption></figure>
+  </div>
+  <div class="foot"><span>Capturas de aera.company em 04/11/2026</span><span>Fios, números e muito vazio</span></div>
+</section>
+
+<!-- 04 tese -->
+<section class="s light">
+  <div class="meta"><span>Ideia central</span><span>04</span></div>
+  <div style="position:absolute;left:120px;top:240px;width:1500px">
+    <div class="lab" style="margin-bottom:32px">Ideia-guia</div>
+    <h1 style="font-size:180px">O espaço antes<br>da coisa.</h1>
+  </div>
+  <div style="position:absolute;left:120px;right:120px;bottom:150px;display:grid;grid-template-columns:repeat(3,1fr);gap:56px">
+    <div class="rule" style="padding-top:22px"><div class="num">01 · Tensão</div><p style="margin-top:12px">Precisão contra calor. A estrutura é fria e exata; a imagem é quente e humana.</p></div>
+    <div class="rule" style="padding-top:22px"><div class="num">02 · Por quê</div><p style="margin-top:12px">O cliente compra a confiança de que a ideia vai existir. Mostrar o lugar dela comunica isso.</p></div>
+    <div class="rule" style="padding-top:22px"><div class="num">03 · Diferença</div><p style="margin-top:12px">Agências mostram portfólio, consultorias mostram diagnóstico. A AERA mostra o espaço pronto.</p></div>
+  </div>
+</section>
+
+<!-- 05 território -->
+<section class="s">
+  <div class="meta"><span>Território da marca</span><span>05</span></div>
+  <div class="body" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:56px">
+    <div><h3>O que entra</h3><div style="margin-top:28px">
+      <div class="item"><span class="num">01</span><p>Espaços e arquitetura em luz quente.</p></div>
+      <div class="item"><span class="num">02</span><p>Tipografia grande como imagem.</p></div>
+      <div class="item"><span class="num">03</span><p>Grid, números e rótulos técnicos.</p></div>
+      <div class="item"><span class="num">04</span><p>O método em quatro movimentos.</p></div>
+      <div class="item"><span class="num">05</span><p>Frases curtas sobre o que faz uma ideia existir.</p></div></div></div>
+    <div><h3>O que fica fora</h3><div style="margin-top:28px">
+      <div class="item"><span class="num">01</span><p>Pessoas e rostos.</p></div>
+      <div class="item"><span class="num">02</span><p>Cara de IA: neon, cérebro, circuito, robô.</p></div>
+      <div class="item"><span class="num">03</span><p>Banco de imagem corporativo.</p></div>
+      <div class="item"><span class="num">04</span><p>Qualquer cor de destaque.</p></div>
+      <div class="item"><span class="num">05</span><p>Frase motivacional e hype.</p></div></div></div>
+    <div style="border-left:1px solid var(--i15);padding-left:56px"><div class="lab">Assinatura reconhecível</div>
+      <p style="font-size:38px;line-height:1.3;margin-top:28px;letter-spacing:-.02em">Um título grande e apertado sobre preto, fios finos nas bordas e uma única foto quente de espaço vazio.</p>
+      <p class="cap" style="margin-top:28px;font-size:18px">Mesmo sem logo, a peça é reconhecida pelo encontro de grid frio e luz quente.</p></div>
+  </div>
+</section>
+
+<!-- 06 abertura visual -->
+<section class="s light">
+  <div class="meta"><span>Sistema visual</span><span>06</span></div>
+  <img src="../referencias/logo-simbolo-estrela-preto.png" style="position:absolute;width:760px;left:-200px;bottom:-260px">
+  <div style="position:absolute;right:120px;top:300px;width:980px">
+    <h1 style="font-size:132px">Estrutura fria,<br>imagem quente.</h1>
+    <p class="lede" style="margin-top:40px">60% prancha técnica, de onde vem o pensar. 40% still de cinema, de onde vem a coisa já existindo. A tipografia manda; a foto dá a temperatura.</p>
+  </div>
+</section>
+
+<!-- 07 paleta -->
+<section class="s">
+  <div class="meta"><span>Cor</span><span>07</span></div>
+  <div style="position:absolute;left:120px;top:150px;width:760px"><h2>Duas cores. A terceira é a luz.</h2>
+    <p class="lede" style="margin-top:28px;font-size:28px">Nenhum elemento gráfico ganha cor. Destaque se faz com tamanho, peso e espaço. A cor da marca entra só pela fotografia.</p></div>
+  <div style="position:absolute;left:120px;right:120px;bottom:150px;display:grid;grid-template-columns:4fr 1.2fr .6fr;gap:0;height:420px;border:1px solid var(--i15)">
+    <div style="background:#0A0A0A;padding:28px;display:flex;flex-direction:column;justify-content:space-between"><span class="lab">Preto AERA · fundo principal</span><div><div style="font-size:64px;font-weight:650;letter-spacing:-.03em">#0A0A0A</div><div class="mono" style="color:var(--i40);margin-top:8px">80% da área · nunca preto puro em bloco</div></div></div>
+    <div style="background:#F1EFE8;color:#111;padding:28px;display:flex;flex-direction:column;justify-content:space-between"><span class="lab" style="color:var(--g55)">Marfim AERA</span><div><div style="font-size:48px;font-weight:650;letter-spacing:-.03em">#F1EFE8</div><div class="mono" style="color:var(--g55);margin-top:8px">15% · texto e pausa</div></div></div>
+    <div style="display:flex;flex-direction:column"><div style="flex:1;background:#F2C98A"></div><div style="flex:1;background:#D08F48"></div><div style="flex:1;background:#7A4A22"></div><div style="flex:1;background:#24150A;padding:20px;display:flex;align-items:flex-end"><span class="mono" style="color:#F1EFE8">5% · luz</span></div></div>
+  </div>
+  <div style="position:absolute;right:120px;top:170px;width:700px">
+    <table class="tbl"><tr><th>Derivado</th><th>Uso</th></tr>
+      <tr><td><span style="display:inline-block;width:18px;height:18px;background:rgba(241,239,232,.7);vertical-align:-3px;margin-right:12px"></span>Marfim 70</td><td>Texto secundário sobre preto</td></tr>
+      <tr><td><span style="display:inline-block;width:18px;height:18px;background:rgba(241,239,232,.4);vertical-align:-3px;margin-right:12px"></span>Marfim 40</td><td>Rótulos e numeração</td></tr>
+      <tr><td><span style="display:inline-block;width:18px;height:18px;background:rgba(241,239,232,.15);vertical-align:-3px;margin-right:12px;border:1px solid rgba(241,239,232,.3)"></span>Marfim 15</td><td>Fios do grid</td></tr></table>
+  </div>
+  <div class="foot"><span>Cores de alerta existem só para interface do office, nunca em post</span><span>A amostra de luz é ilustrativa</span></div>
+</section>
+
+<!-- 08 tipografia -->
+<section class="s light">
+  <div class="meta"><span>Tipografia</span><span>08</span></div>
+  <div style="position:absolute;left:120px;top:170px;right:120px">
+    <div class="lab">Instrument Sans · 650 · sentence case</div>
+    <div style="font-size:150px;font-weight:650;letter-spacing:-.045em;line-height:1;margin-top:20px">A primeira versão<br>precisa existir.</div>
+  </div>
+  <div style="position:absolute;left:120px;right:120px;bottom:150px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:56px">
+    <div class="rule" style="padding-top:22px"><div style="font-family:var(--label);font-size:22px;letter-spacing:.16em;text-transform:uppercase">AERA · Build</div><p style="margin-top:14px;font-size:24px">Archivo em caixa alta e espaçada. Só em rótulos curtos, como etiqueta de prancha.</p></div>
+    <div class="rule" style="padding-top:22px"><div style="font-family:var(--mono);font-size:24px">01 / 06 · 04.11.2026</div><p style="margin-top:14px;font-size:24px">Geist Mono para números, datas e metadados. Tempero, nunca texto corrido.</p></div>
+    <div class="rule" style="padding-top:22px"><div style="font-size:24px;font-weight:600">Diferente do site, de propósito.</div><p style="margin-top:14px;font-size:24px">O site grita em caixa alta. Os posts conversam em sentence case, e o título não leva ponto final.</p></div>
+  </div>
+</section>
+
+<!-- 09 escala -->
+<section class="s">
+  <div class="meta"><span>Hierarquia nos posts · base 1080 px</span><span>09</span></div>
+  <div class="body" style="display:grid;grid-template-columns:1fr 760px;gap:96px;align-items:center">
+    <div>
+      <div style="font-size:120px;font-weight:650;letter-spacing:-.04em;line-height:1">Display XL</div>
+      <div style="font-size:84px;font-weight:650;letter-spacing:-.035em;line-height:1;margin-top:18px">Display L</div>
+      <div style="font-size:56px;font-weight:600;letter-spacing:-.025em;margin-top:18px">Display M</div>
+      <div style="font-size:34px;margin-top:22px">Corpo L, até 30 palavras por card.</div>
+      <div style="font-family:var(--label);font-size:18px;letter-spacing:.16em;text-transform:uppercase;margin-top:22px;color:var(--i70)">Rótulo Archivo</div>
+      <div style="font-family:var(--mono);font-size:20px;margin-top:14px;color:var(--i70)">Mono 01 / 06</div>
+    </div>
+    <table class="tbl"><tr><th>Nível</th><th>Tamanho</th><th>Uso</th></tr>
+      <tr><td>Display XL</td><td>120 a 140</td><td>Capa, até 5 palavras</td></tr>
+      <tr><td>Display L</td><td>84 a 100</td><td>Título de post, até 8 palavras</td></tr>
+      <tr><td>Display M</td><td>56 a 64</td><td>Título de card</td></tr>
+      <tr><td>Corpo L</td><td>34 a 38</td><td>Texto de card</td></tr>
+      <tr><td>Rótulo</td><td>18 a 20</td><td>Nome de seção</td></tr>
+      <tr><td>Mono</td><td>18 a 22</td><td>Numeração e datas</td></tr></table>
+  </div>
+</section>
+
+<!-- 10 marca -->
+<section class="s light">
+  <div class="meta"><span>Marca</span><span>10</span></div>
+  <div style="position:absolute;left:120px;top:150px;width:800px"><h2>Tudo nasce do arco do A.</h2>
+    <p class="lede" style="margin-top:28px;font-size:28px">O mesmo traço, de espessura uniforme e pontas arredondadas, forma o logotipo, o monograma e a estrela.</p></div>
+  <div style="position:absolute;left:120px;right:120px;bottom:150px;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:24px;height:440px">
+    <div style="background:#0A0A0A;display:flex;flex-direction:column;justify-content:space-between;padding:32px"><span class="lab" style="color:rgba(241,239,232,.4)">Logotipo · assinatura</span><img src="../referencias/logo-aera-marfim.svg" style="height:86px;align-self:flex-start"><span class="mono" style="color:rgba(241,239,232,.4)">Canto fixo, 28 a 32 px · traz "Built to rise" em miúdo</span></div>
+    <div style="background:#0A0A0A;display:flex;flex-direction:column;justify-content:space-between;padding:32px"><span class="lab" style="color:rgba(241,239,232,.4)">Monograma A</span><img src="../referencias/logo-monograma-a-marfim.png" style="height:120px;align-self:center"><span class="mono" style="color:rgba(241,239,232,.4)">Perfil, favicon, carimbo</span></div>
+    <div style="border:1px solid var(--g15);display:flex;flex-direction:column;justify-content:space-between;padding:32px"><span class="lab">Estrela · oito arcos</span><img src="../referencias/logo-simbolo-estrela-preto.png" style="height:200px;align-self:center"><span class="mono" style="color:var(--g55)">Forças que convergem</span></div>
+  </div>
+  <div class="foot"><span>Marfim oficial unificado em #F1EFE8 (antes havia três tons)</span><span>Monograma e estrela: pedir o vetor</span></div>
+</section>
+
+<!-- 11 estrela regras -->
+<section class="s">
+  <div class="meta"><span>Estrela · uso com cautela</span><span>11</span></div>
+  <img src="../referencias/logo-simbolo-estrela-marfim.png" style="position:absolute;width:820px;right:-300px;bottom:-300px;opacity:.85">
+  <div class="body" style="width:1000px">
+    <h2>Discreta por padrão. Grande, raramente.</h2>
+    <div style="margin-top:44px">
+      <div class="item"><span class="num">01</span><p><strong>Padrão:</strong> assinatura num canto ou marcador de numeração, de 24 a 40 px.</p></div>
+      <div class="item"><span class="num">02</span><p><strong>Grande:</strong> só em peça tipográfica sem foto, no máximo uma a cada quatro peças.</p></div>
+      <div class="item"><span class="num">03</span><p><strong>Sempre cortada pela borda,</strong> como nesta página. Nunca inteira no centro.</p></div>
+      <div class="item"><span class="num">04</span><p><strong>Nunca</strong> atrás de foto, colorida ou girada fora de 45 graus.</p></div>
+      <div class="item"><span class="num">05</span><p><strong>Em movimento:</strong> gira devagar ou abre os oito arcos. Nunca pulsa.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 12 grid e formatos -->
+<section class="s light">
+  <div class="meta"><span>Grid e formatos</span><span>12</span></div>
+  <div style="position:absolute;left:120px;top:150px;width:640px"><h2>Fios que organizam.</h2>
+    <div style="margin-top:36px">
+      <div class="item"><span class="num">64</span><p>Margem em peça de 1080 px.</p></div>
+      <div class="item"><span class="num">1 px</span><p>Fio do grid a 15% de opacidade.</p></div>
+      <div class="item"><span class="num">8</span><p>Unidade de espaço. Tudo em múltiplos.</p></div>
+      <div class="item"><span class="num">0</span><p>Raio de canto. Tudo reto.</p></div>
+    </div></div>
+  <div style="position:absolute;right:120px;bottom:140px;display:flex;gap:56px;align-items:flex-end">
+    <figure><div style="width:432px;height:540px;background:#0A0A0A;position:relative">
+      <div style="position:absolute;inset:26px;border:1px solid rgba(241,239,232,.15)"></div>
+      <div style="position:absolute;left:26px;right:26px;top:26px;height:250px;background:linear-gradient(135deg,#140c06,#5a3a1c 55%,#d39a55 75%,#140c06);opacity:.95"></div>
+      <div style="position:absolute;left:44px;bottom:76px;color:#F1EFE8;font-size:40px;font-weight:650;letter-spacing:-.035em;line-height:1">A primeira versão<br>precisa existir</div>
+      <div style="position:absolute;left:44px;bottom:40px;font-family:var(--label);font-size:9px;letter-spacing:.16em;color:rgba(241,239,232,.5)">AERA · BUILD</div>
+      <div style="position:absolute;right:44px;bottom:40px;font-family:var(--mono);font-size:10px;color:rgba(241,239,232,.5)">01 / 06</div>
+    </div><figcaption class="cap">Feed e carrossel · 1080 × 1350</figcaption></figure>
+    <figure><div style="width:304px;height:540px;background:#0A0A0A;position:relative">
+      <div style="position:absolute;left:0;right:0;top:0;height:70px;background:repeating-linear-gradient(45deg,rgba(241,239,232,.08) 0 6px,transparent 6px 12px)"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:96px;background:repeating-linear-gradient(45deg,rgba(241,239,232,.08) 0 6px,transparent 6px 12px)"></div>
+      <div style="position:absolute;left:24px;top:200px;color:#F1EFE8;font-size:30px;font-weight:650;letter-spacing:-.03em;line-height:1.05">Uma ideia<br>por tela</div>
+    </div><figcaption class="cap">Story · 1080 × 1920 · zonas livres marcadas</figcaption></figure>
+  </div>
+</section>
+
+<!-- 13 fotografia -->
+<section class="s">
+  <div class="meta"><span>Imagem</span><span>13</span></div>
+  <div style="position:absolute;left:120px;top:150px;width:900px">
+    <h2>Espaço vazio, luz de lâmpada, nenhuma pessoa.</h2>
+    <p class="lede" style="margin-top:28px;font-size:28px">Stills de filme sem atores: a cena está pronta, alguma coisa vai acontecer ali. Imagem sobre lugar e clima, não sobre objeto.</p>
+  </div>
+  <figure style="position:absolute;right:120px;top:150px;width:640px;height:780px;margin:0"><img src="../referencias/aprovado-espaco-01.png" style="width:640px;height:740px;object-fit:cover;display:block"><figcaption class="cap">Primeira imagem aprovada · gerada no Higgsfield em 04/11</figcaption></figure>
+  <div style="position:absolute;left:120px;bottom:150px;width:960px;display:grid;grid-template-columns:1fr 1fr;gap:0 56px">
+    <div class="item"><span class="num">Luz</span><p>Uma fonte, lateral ou de cima, 2700 a 3200 K.</p></div>
+    <div class="item"><span class="num">Sombra</span><p>Profunda, fundindo com o preto da peça.</p></div>
+    <div class="item"><span class="num">Lente</span><p>35 a 50 mm, na altura do olho ou abaixo.</p></div>
+    <div class="item"><span class="num">Linha</span><p>Uma aresta forte que continua um fio do grid.</p></div>
+    <div class="item"><span class="num">Matéria</span><p>Concreto, gesso, pedra, madeira escura, vidro.</p></div>
+    <div class="item"><span class="num">Textura</span><p>Grão fino de filme. Nada de brilho ou HDR.</p></div>
+  </div>
+</section>
+
+<!-- 14 anti -->
+<section class="s light">
+  <div class="meta"><span>O que a AERA não é</span><span>14</span></div>
+  <div class="body" style="display:grid;grid-template-columns:560px 1fr;gap:96px">
+    <h2>Cinco atalhos proibidos.</h2>
+    <div>
+      <div class="item"><span class="num">01</span><p><strong>Banco de imagem corporativo.</strong> Escritório claro, aperto de mão, equipe sorrindo.</p></div>
+      <div class="item"><span class="num">02</span><p><strong>Cara de IA.</strong> Neon azul e roxo, cérebro, circuito, robô, partículas.</p></div>
+      <div class="item"><span class="num">03</span><p><strong>3D brilhante genérico.</strong> Plástico flutuando, cromado, liso demais.</p></div>
+      <div class="item"><span class="num">04</span><p><strong>Aparelho flutuando.</strong> Interface só real e dentro de um espaço.</p></div>
+      <div class="item"><span class="num">05</span><p><strong>Peça cheia.</strong> O que faz a AERA é o espaço vazio. Se há dois destaques, tire um.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15 voz -->
+<section class="s">
+  <div class="meta"><span>Voz</span><span>15</span></div>
+  <div style="position:absolute;left:120px;top:150px;width:1100px"><h2>Falar como quem já fez.</h2></div>
+  <div style="position:absolute;left:120px;right:120px;bottom:150px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:56px">
+    <div><div class="lab">É · não é</div>
+      <table class="tbl" style="margin-top:18px"><tr><td>Segura</td><td style="color:var(--i40)">arrogante</td></tr><tr><td>Curta</td><td style="color:var(--i40)">seca</td></tr><tr><td>Humana</td><td style="color:var(--i40)">informal demais</td></tr><tr><td>Precisa</td><td style="color:var(--i40)">técnica demais</td></tr><tr><td>Curiosa</td><td style="color:var(--i40)">deslumbrada</td></tr></table></div>
+    <div><div class="lab">Usa</div><p style="margin-top:18px;font-size:26px;line-height:1.6">primeira versão · construir · rodar · existir · método · direção · oportunidade · negócio inteiro</p>
+      <div class="lab" style="margin-top:36px">Evita</div><p style="margin-top:18px;font-size:26px;line-height:1.6;color:var(--i40)">soluções inovadoras · transformador · disruptivo · 360 · apaixonados por · inglês sem função</p></div>
+    <div><div class="lab">Regras fixas</div>
+      <div class="item"><span class="num">01</span><p>Português, com inglês só de acento.</p></div>
+      <div class="item"><span class="num">02</span><p>Sentence case, nunca travessão.</p></div>
+      <div class="item"><span class="num">03</span><p>A IA nunca é o sujeito da frase.</p></div>
+      <div class="item"><span class="num">04</span><p>Nenhum número sem fonte.</p></div></div>
+  </div>
+</section>
+
+<!-- 16 audiência -->
+<section class="s light">
+  <div class="meta"><span>Para quem</span><span>16</span></div>
+  <div class="body" style="display:grid;grid-template-columns:1.2fr 1fr;gap:96px">
+    <div><div class="lab">Persona · fictícia</div>
+      <h2 style="margin-top:20px">Marcelo, 46.<br>Fundador e CEO.</h2>
+      <p style="margin-top:32px">Empresa média, de R$ 30 a 150 milhões, no Rio ou em São Paulo. Quer tirar do papel uma expansão, um produto ou um sistema. Decide em reunião curta, lê LinkedIn à noite.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:36px">
+        <div class="rule" style="padding-top:18px"><div class="num">Quer</div><p style="font-size:24px;margin-top:10px">Quem pensa e constrói. Uma primeira versão rápido.</p></div>
+        <div class="rule" style="padding-top:18px"><div class="num">Teme</div><p style="font-size:24px;margin-top:10px">Slide bonito que some. Consultoria que não executa.</p></div></div></div>
+    <div><div class="lab">Anti-persona</div>
+      <div style="margin-top:20px">
+        <div class="item"><span class="num">01</span><p>Peça avulsa pelo menor preço.</p></div>
+        <div class="item"><span class="num">02</span><p>A IA como mágica ou promessa.</p></div>
+        <div class="item"><span class="num">03</span><p>Decisão sem dono, comitê infinito.</p></div>
+        <div class="item"><span class="num">04</span><p>"Faz igual ao concorrente."</p></div></div></div>
+  </div>
+</section>
+
+<!-- 17 filtro -->
+<section class="s">
+  <div class="meta"><span>Filtro editorial · Instagram em primeiro lugar</span><span>17</span></div>
+  <div class="body" style="display:grid;grid-template-columns:1fr 1fr;gap:96px">
+    <div><div class="lab">Fala de</div><div style="margin-top:20px">
+      <div class="item"><span class="num">01</span><p>O método: pensar, criar, construir, operar.</p></div>
+      <div class="item"><span class="num">02</span><p>A primeira versão e o bastidor.</p></div>
+      <div class="item"><span class="num">03</span><p>Decisões de projeto, com o ok do Tiago.</p></div>
+      <div class="item"><span class="num">04</span><p>O negócio inteiro.</p></div>
+      <div class="item"><span class="num">05</span><p>A IA como ferramenta.</p></div></div></div>
+    <div><div class="lab">Não fala de</div><div style="margin-top:20px">
+      <div class="item"><span class="num">01</span><p style="color:var(--i70)">Notícia e hype de IA.</p></div>
+      <div class="item"><span class="num">02</span><p style="color:var(--i70)">Motivação e frase de efeito.</p></div>
+      <div class="item"><span class="num">03</span><p style="color:var(--i70)">Política e polêmica.</p></div>
+      <div class="item"><span class="num">04</span><p style="color:var(--i70)">Data comemorativa genérica.</p></div>
+      <div class="item"><span class="num">05</span><p style="color:var(--i70)">Autopromoção vazia.</p></div></div></div>
+  </div>
+  <div class="foot"><span>Ângulo: olhar cada ideia pelo que ela precisa para existir, rodar e crescer</span><span>3 posts por semana · stories de bastidor</span></div>
+</section>
+
+<!-- 18 fluxo -->
+<section class="s light">
+  <div class="meta"><span>Como o office produz</span><span>18</span></div>
+  <div style="position:absolute;left:120px;top:150px;width:1200px"><h2>Quem faz o quê, e onde o Tiago decide.</h2></div>
+  <div style="position:absolute;left:120px;right:120px;bottom:180px;display:grid;grid-template-columns:repeat(6,1fr);gap:0">
+    <div class="rule" style="padding:22px 24px 0 0"><div class="num">01 · MAYA</div><p style="font-size:24px;margin-top:12px">Pauta pelo filtro.</p></div>
+    <div class="rule" style="padding:22px 24px 0 0"><div class="num">02 · NOA</div><p style="font-size:24px;margin-top:12px">Texto e conceito.</p></div>
+    <div class="rule" style="padding:22px 24px 0 0"><div class="num">03 · JOHN</div><p style="font-size:24px;margin-top:12px">Direção visual e quantas imagens.</p></div>
+    <div style="padding:22px 24px 0 0;border-top:3px solid #111"><div class="num" style="color:#111">04 · Tiago</div><p style="font-size:24px;margin-top:12px"><strong>Libera o lote</strong> de imagens.</p></div>
+    <div class="rule" style="padding:22px 24px 0 0"><div class="num">05 · JOHN e ARI</div><p style="font-size:24px;margin-top:12px">Gera, monta e revisa contra o DNA.</p></div>
+    <div style="padding:22px 0 0 0;border-top:3px solid #111"><div class="num" style="color:#111">06 · Tiago</div><p style="font-size:24px;margin-top:12px"><strong>Aprova e publica.</strong></p></div>
+  </div>
+  <div class="foot"><span>Imagens pelo Higgsfield · nada é publicado sem o Tiago</span><img src="../referencias/logo-aera-preto.svg"></div>
+</section>
+
+<!-- 19 síntese -->
+<section class="s">
+  <div class="meta"><span>Síntese</span><span>19</span></div>
+  <img class="star-bleed" src="../referencias/logo-simbolo-estrela-marfim.png" style="width:900px;left:-320px;top:-240px;opacity:.85">
+  <div style="position:absolute;right:120px;top:220px;width:1050px">
+    <table class="tbl" style="font-size:26px">
+      <tr><th style="width:240px">Essência</th><td>O espaço antes da coisa.</td></tr>
+      <tr><th>Cor</th><td>Preto e marfim. A luz é a terceira cor.</td></tr>
+      <tr><th>Tipografia</th><td>Instrument Sans em sentence case, Archivo, Geist Mono.</td></tr>
+      <tr><th>Imagem</th><td>Espaço e arquitetura, luz de lâmpada, sem pessoas.</td></tr>
+      <tr><th>Voz</th><td>Curta, segura, humana. Como quem já fez.</td></tr>
+      <tr><th>Limite</th><td>Nada de cara de IA, banco de imagem ou peça cheia.</td></tr>
+      <tr><th>Regra final</th><td>Se houver dúvida, corte um elemento.</td></tr>
+    </table>
+  </div>
+  <div class="foot"><span>We make things move.</span><img src="../referencias/logo-aera-marfim.svg"></div>
+</section>
+
+</body>
+</html>

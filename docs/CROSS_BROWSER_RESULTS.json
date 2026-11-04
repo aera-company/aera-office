@@ -1,0 +1,49 @@
+{
+  "offline": {
+    "protocol": "file:",
+    "slide": "04 / 04",
+    "image": [
+      3200,
+      1800
+    ],
+    "notesVisible": true,
+    "errors": []
+  },
+  "webkit": {
+    "state": {
+      "selected": "create",
+      "working": false,
+      "visualMode": false,
+      "ready": true
+    },
+    "agent": "NOA",
+    "diagnostics": {
+      "three": "180",
+      "quality": "alta",
+      "dpr": 1.5,
+      "viewport": [
+        1440,
+        900
+      ],
+      "drawCalls": 40,
+      "triangles": 214520,
+      "sampledFrames": 84,
+      "fps": 57.4,
+      "p95FrameMs": 21,
+      "meanSubmitMs": 1.42,
+      "gpu": "Apple GPU",
+      "camera": [
+        21,
+        11.5,
+        24
+      ],
+      "target": [
+        5,
+        6.7,
+        0.2999999999999998
+      ],
+      "webgl": "WebGL 2.0"
+    },
+    "errors": []
+  }
+}

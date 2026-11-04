@@ -1,0 +1,47 @@
+{
+  "initial": [
+    -4.699999999999999,
+    6.72,
+    4.649999999999999
+  ],
+  "final": [
+    -5.068274226428904,
+    6.72,
+    2.858848080550343
+  ],
+  "displacement": 1.8286199999999984,
+  "floor": "upper",
+  "eyeHeight": 6.72,
+  "viewport": [
+    1118,
+    927
+  ],
+  "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)",
+  "profileChecks": [
+    {
+      "zone": "think",
+      "actual": "MAYA",
+      "passed": true
+    },
+    {
+      "zone": "create",
+      "actual": "NOA",
+      "passed": true
+    },
+    {
+      "zone": "build",
+      "actual": "LEO",
+      "passed": true
+    },
+    {
+      "zone": "grow",
+      "actual": "NINA",
+      "passed": true
+    },
+    {
+      "zone": "control",
+      "actual": "ARI",
+      "passed": true
+    }
+  ]
+}

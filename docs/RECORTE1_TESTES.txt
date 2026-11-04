@@ -1,0 +1,111 @@
+AERA AI OFFICE · recorte 1 · testes em 2026-10-30 18:39
+
+== tests/test_operation.py
+test_full_http_job_approval_revision_export_and_private_storage (__main__.HTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:48] "POST /api/jobs HTTP/1.1" 201 -
+test_missing_connection_never_creates_fake_work (__main__.HTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:48] "POST /api/jobs HTTP/1.1" 503 -
+test_same_origin_and_mutation_headers_are_required (__main__.HTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:49] "POST /api/jobs HTTP/1.1" 403 -
+test_approval_and_revision_keep_previous_delivery (__main__.OperationTests) ... ok
+test_background_operation_does_not_need_browser_polling (__main__.OperationTests) ... ok
+test_cancel_during_provider_call_stops_following_calls (__main__.OperationTests) ... ok
+test_failure_preserves_work_and_resume_skips_completed_calls (__main__.OperationTests) ... ok
+test_idempotent_submission_never_duplicates_job (__main__.OperationTests) ... ok
+test_invalid_dependency_graph_never_reaches_execution (__main__.OperationTests) ... ok
+test_questions_block_specialists_until_answer (__main__.OperationTests) ... ok
+test_real_handoff_contract_and_non_template_delivery (__main__.OperationTests) ... ok
+test_restart_recovers_interrupted_job_without_paid_retry (__main__.OperationTests) ... ok
+test_scheduled_job_waits_until_due (__main__.OperationTests) ... ok
+test_messages_contract_uses_schema_and_server_side_auth (__main__.ProviderContractTests) ... ok
+test_refusal_and_partial_output_never_become_a_delivery (__main__.ProviderContractTests) ... ok
+test_upstream_error_does_not_echo_private_provider_body (__main__.ProviderContractTests) ... ok
+Ran 16 tests in 1.790s
+OK
+
+== tests/test_recorte1.py
+test_register_client_from_site_propose_confirm_and_use_in_job (__main__.ClientHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:50] "POST /api/clients HTTP/1.1" 201 -
+test_runtime_database_is_still_private (__main__.ClientHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:51] "GET / HTTP/1.1" 200 -
+test_unreadable_link_is_registered_not_invented (__main__.ClientHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:51] "POST /api/clients HTTP/1.1" 201 -
+test_wrong_client_cannot_touch_another_clients_notes (__main__.ClientHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:52] "POST /api/clients HTTP/1.1" 201 -
+test_each_job_only_sees_its_own_client (__main__.ClientIsolationTests) ... ok
+test_job_without_client_keeps_old_contract (__main__.ClientIsolationTests) ... ok
+test_memory_states_supersede_and_context_filters (__main__.ClientIsolationTests) ... ok
+test_project_scoping_and_material_budget (__main__.ClientIsolationTests) ... ok
+test_propose_client_only_proposes_never_confirms (__main__.ClientIsolationTests) ... ok
+test_extract_text_keeps_block_structure (__main__.LinkReaderTests) ... ok
+test_only_https_is_read_outside_tests (__main__.LinkReaderTests) ... ok
+test_reads_public_page_text_without_scripts (__main__.LinkReaderTests) ... ok
+test_unreadable_pages_are_recorded_with_reason_never_guessed (__main__.LinkReaderTests) ... ok
+Ran 13 tests in 4.245s
+OK
+
+== tests/test_gate2.py
+test_capabilities_catalog_and_estimate_routes (__main__.CatalogHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:54] "GET /api/capabilities HTTP/1.1" 200 -
+test_declared_job_cannot_be_submitted (__main__.CatalogHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:55] "POST /api/jobs HTTP/1.1" 409 -
+test_estimate_scales_with_posts_and_pieces (__main__.CatalogTests) ... ok
+test_only_content_job_and_free_request_are_executable (__main__.CatalogTests) ... ok
+test_station_without_executor_never_receives_a_task (__main__.CatalogTests) ... ok
+test_free_request_loads_default_stations_only (__main__.EngineMethodTests) ... ok
+test_running_task_shows_in_capabilities_state (__main__.EngineMethodTests) ... ok
+test_tasks_carry_the_right_methods_and_record_them (__main__.EngineMethodTests) ... ok
+test_every_catalog_station_exists_and_declared_jobs_match (__main__.RegistryTests) ... ok
+test_markdown_lists_every_station (__main__.RegistryTests) ... ok
+test_method_excerpts_are_bounded_and_recorded (__main__.RegistryTests) ... ok
+test_registry_is_consistent_and_every_method_file_exists (__main__.RegistryTests) ... ok
+test_states_follow_executor_connection_and_running_tasks (__main__.RegistryTests) ... ok
+Ran 13 tests in 1.117s
+OK
+
+== tests/test_gate3.py
+test_full_card_flow_over_http (__main__.CardHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:56] "POST /api/clients HTTP/1.1" 201 -
+test_adjust_one_card_calls_only_its_owner_and_keeps_the_others (__main__.CardJobTests) ... ok
+test_approve_writes_real_files_and_discard_records_reason (__main__.CardJobTests) ... ok
+test_cancel_between_posts_stops_following_calls (__main__.CardJobTests) ... ok
+test_ceiling_interrupts_and_preserves_cards_and_resume_releases_calls (__main__.CardJobTests) ... ok
+test_clarify_pauses_before_any_production (__main__.CardJobTests) ... ok
+test_estimate_gate_then_pauta_posts_and_review (__main__.CardJobTests) ... ok
+test_no_call_happens_before_estimate_confirmation (__main__.CardJobTests) ... ok
+test_running_state_names_the_phase_for_the_building (__main__.CardJobTests) ... ok
+Ran 9 tests in 2.759s
+OK
+
+== tests/test_gate4.py
+test_status_file_route_and_pending_generation (__main__.ImageHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:39:59] "GET /api/status HTTP/1.1" 200 -
+test_failure_keeps_piece_pending_with_reason_and_job_continues (__main__.ImageJobTests) ... ok
+test_image_ceiling_stops_paid_actions (__main__.ImageJobTests) ... ok
+test_images_are_generated_per_piece_with_real_files_and_feed_as_reference (__main__.ImageJobTests) ... ok
+test_minimal_png_is_valid (__main__.ImageJobTests) ... ok
+test_without_executor_pieces_stay_pending_and_reconnect_generates_only_pending (__main__.ImageJobTests) ... ok
+test_login_flow_and_generation_against_a_local_fake (__main__.MagnificTransportTests) ... ok
+test_status_never_ready_without_token (__main__.MagnificTransportTests) ... ok
+Ran 8 tests in 1.701s
+OK
+
+== tests/test_gate5.py
+test_routes_answer (__main__.ActivityHTTPTests) ... 127.0.0.1 - - [30/Oct/2026 18:40:01] "GET /api/activity HTTP/1.1" 200 -
+test_missed_schedule_is_reported_not_run (__main__.ActivityTests) ... ok
+test_summary_and_activity_follow_real_events (__main__.ActivityTests) ... ok
+Ran 3 tests in 0.577s
+OK
+
+== npm test
+✔ Entradas de ambientes e elevador ficam em áreas livres (0.513375ms)
+✔ Percurso permanece dentro do edifício, inclusive em saltos grandes (1.791791ms)
+✔ Mesa e vazio da escada bloqueiam passagem (0.587167ms)
+✔ Ao encontrar um obstáculo, caminhada desliza em seu contorno (0.073417ms)
+✔ Coordenadas inválidas e pisos inexistentes são recusados (0.06625ms)
+✔ Toda estação do registro recebe posição dentro da sala do seu personagem (1.105542ms)
+✔ Pontos de circulação são andáveis, no mesmo pavimento e alcançáveis em linha reta (2.0255ms)
+✔ Altura do personagem resolve o pavimento certo (0.083541ms)
+ℹ pass 8
+ℹ fail 0
+
+== npm run build
+dist/assets/instrument-sans-latin-ext-wght-normal-B5bTHO_g.woff2     11.14 kB
+dist/index.html                                                      22.52 kB │ gzip:   6.91 kB
+dist/assets/aera-logo-Ctzc6y9w.png                                   25.80 kB
+dist/assets/instrument-sans-latin-wght-normal-BbzFLZTg.woff2         30.09 kB
+dist/assets/office-concept-C3gakceN.png                           2,732.99 kB
+dist/assets/index-BAA0NmT5.css                                       47.38 kB │ gzip:  10.46 kB
+dist/assets/main-C5XNnowN.js                                         31.84 kB │ gzip:  13.51 kB
+dist/assets/index-Ck_m7Q7T.js                                        63.77 kB │ gzip:  21.09 kB
+dist/assets/three-Cwp5bljr.js                                       535.42 kB │ gzip: 135.41 kB
+✓ built in 768ms

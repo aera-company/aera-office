@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-30",
+  "scope": "recorte 1 · conteúdo da semana · gates 1 a 7 implementados",
+  "backend": {
+    "ready": false,
+    "verified": false,
+    "provider": "Claude / Anthropic",
+    "model": "claude-sonnet-5-5",
+    "model_configurable": true,
+    "source": "aera",
+    "persistence": true,
+    "fixture": false,
+    "operation": true,
+    "storage": "sqlite",
+    "persistent": true
+  },
+  "image_executor": {
+    "provider": "Magnific (MCP HTTP + OAuth)",
+    "model": "magnific-one",
+    "connected": false,
+    "live_request_verified": false,
+    "account_credits_seen_2026_10_30": "22 de 45.000; modo ilimitado não vale no MCP",
+    "fixture_available": true
+  },
+  "model_live_request_verified": false,
+  "reason": "Tiago adiou a conexão própria AERA e o login do Magnific. Nenhuma geração real de texto ou imagem foi executada.",
+  "tests": {
+    "python": {"test_operation": 16, "test_recorte1": 13, "test_gate2": 13, "test_gate3": 9, "test_gate4": 8, "test_gate5": 3, "total": 62},
+    "node": {"navigation": 5, "stations": 3, "total": 8},
+    "fixture_ui_verified": true,
+    "real_link_read": "https://aera.company lido pelo servidor (6.146 caracteres)",
+    "bundle_credential_scan": "dist/ sem ocorrências de chave, token ou segredo de teste"
+  },
+  "capabilities": {"characters": 5, "stations": 18, "method_files": 32, "method_files_missing": 0},
+  "jobs": {"executable": ["pedido", "conteudo-semana"], "declared": ["proposta-html", "landing-page", "brief-tecnico"]},
+  "performance": {"previous_measurement": "docs/NAVIGATION_METRICS_2026-10-30.json (59,8 fps, p95 18,7 ms, 42 draw calls, M1)", "after_gate6": "geometria inalterada; fps a medir no Safari/Chrome do Mac, não medido com confiança no painel do app"},
+  "not_connected": ["WhatsApp", "Meta Ads", "CRM", "publicação em redes", "Notion", "Drive"],
+  "connection_deferred_by_user": true,
+  "backup_before_recorte1": "backups/aera-before-recorte-1-2026-10-30.tgz"
+}

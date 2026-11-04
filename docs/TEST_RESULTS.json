@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-25",
+  "url": "http://127.0.0.1:8080",
+  "checks": [
+    "Cena WebGL pronta e loading encerrado",
+    "Screenshot inicial 1600 × 900 (16:9), retina 2x",
+    "6 destinos: câmera, perfil e estado de navegação consistentes",
+    "Hotspot da arquitetura e retorno à visão geral",
+    "Medição em Metal / Apple M1 durante as transições, DPR limitado a 1.5",
+    "Órbita por arraste altera a câmera",
+    "Zoom pelo trackpad/scroll funciona",
+    "Gesto interrompe transição automática",
+    "Navegação por teclado e movimento reduzido",
+    "Modo leve e modo alta qualidade alternam",
+    "Briefing → 4 agentes → resultado identificado → exportação .txt",
+    "Dialog fecha por Escape/botão e entrega pode ser reaberta",
+    "Desktop 1440 × 900",
+    "390 × 844: sem overflow e departamentos acessíveis",
+    "Perda de contexto WebGL ativa fallback legível",
+    "Contingência forçada sem iniciar WebGL",
+    "Zero requisições externas: biblioteca, fonte e marca locais",
+    "Zero erros de console ou exceções na execução normal"
+  ],
+  "errors": [],
+  "warnings": [],
+  "externalRequests": [],
+  "performance": {
+    "three": "180",
+    "quality": "alta",
+    "dpr": 1.5,
+    "viewport": [
+      1600,
+      900
+    ],
+    "drawCalls": 40,
+    "triangles": 214520,
+    "sampledFrames": 529,
+    "fps": 58.8,
+    "p95FrameMs": 17.7,
+    "meanSubmitMs": 0.87,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)",
+    "camera": [
+      25,
+      11.500000000000002,
+      34
+    ],
+    "target": [
+      0,
+      4.5,
+      0
+    ],
+    "webgl": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+  }
+}

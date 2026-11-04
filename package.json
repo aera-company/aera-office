@@ -1,0 +1,22 @@
+{
+  "name": "aera-living-office",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/navigation.test.js tests/stations.test.js",
+    "start": "python3 scripts/serve_demo.py",
+    "test:operation": "PYTHONDONTWRITEBYTECODE=1 python3 tests/test_operation.py"
+  },
+  "dependencies": {
+    "@elevenlabs/client": "1.28.0",
+    "@fontsource-variable/instrument-sans": "5.2.6",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "vite": "7.1.12"
+  }
+}
