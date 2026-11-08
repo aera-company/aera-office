@@ -27,7 +27,13 @@ export default async function handler(req,res){
   let token='';
   try{
     const response=await fetch('https://api.elevenlabs.io/v1/convai/conversation/token?'+new URLSearchParams({agent_id:agent}),{headers:{'xi-api-key':key},signal:AbortSignal.timeout(12000)});
-    if(!response.ok){console.error('NAYRA site: ElevenLabs respondeu',response.status);return res.status(502).json({error:'Não foi possível abrir a conversa agora.'});}
+    if(!response.ok){
+      // ElevenLabs says why it refused (for example, which permission is missing); only that reason is logged, never the key.
+      let detail={};try{detail=(await response.json()).detail||{};}catch{}
+      const reason=typeof detail==='string'?detail:[detail.status,detail.code,detail.message].filter(Boolean).join(' | ');
+      console.error('NAYRA site: ElevenLabs respondeu',response.status,String(reason).slice(0,240));
+      return res.status(502).json({error:'Não foi possível abrir a conversa agora.'});
+    }
     token=(await response.json()).token||'';
   }catch{
     return res.status(502).json({error:'Não foi possível abrir a conversa agora.'});
