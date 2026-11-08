@@ -5,6 +5,7 @@ import {initPanel} from './panel.js';
 import {initNayra} from './nayra.js';
 import {initNayraVoz} from './nayra-voz.js';
 import {mountOrb} from './orb.js';
+import {VITRINE} from './vitrine.js';
 import {floorSpecs,roomSpecs} from './navigation.js';
 const $=selector=>document.querySelector(selector);
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
@@ -147,7 +148,7 @@ function updateNavigation(state){
 }
 function onInteraction(){if(tour.active&&!tour.paused)pauseTour();if(working)stopFollowingWork();}
 function closeBrief(){operations?.close();}
-function openBrief(){operations?.open();}
+function openBrief(){if(VITRINE)return;operations?.open();}
 document.querySelectorAll('.zone-button').forEach(b=>b.onclick=e=>selectZone(b.dataset.zone,{instant:e.detail===0}));
 document.querySelectorAll('[data-floor]').forEach(b=>b.onclick=()=>chooseFloor(b.dataset.floor));
 // Hero key and room strip: hovering a row lights the matching marker on the building; clicking goes there.
@@ -265,11 +266,12 @@ const voz=initNayraVoz({api:operations.api,briefing:()=>nayra.open(),closeBriefi
   openJob(id){stopTour();if(!operations.isOpen())operations.open();operations.selectJob(id);},
   onPresentation(){operations.refresh(false);syncCaps();nayra.refreshCount();if(operations.isOpen())panel?.renderSummary();}});
 $('#nayra-call').onclick=()=>voz.presenting?voz.converse():nayra.open();
+if(VITRINE){document.body.classList.add('vitrine');$('#nayra-call').title='Conhecer a NAYRA';$('#nayra-title').textContent='NAYRA · AERA AI Office';}
 // The orb is drawn in code (ring of fine lines, reference from Tiago 02/11); it only animates while its stage is on screen.
 mountOrb($('#nayra-orb'),{lines:88,points:260,mesh:true,image:'./nayra/orbe.webp'});mountOrb($('#nayra-live-orb'),{lines:44,points:180,mesh:true,image:'./nayra/orbe.webp'});
 function finishLoading(){$('#loading').classList.add('finished');setTimeout(()=>$('#loading').hidden=true,300);}
 function fallback(reason){$('.intro-note').textContent='Modo visual · Navegação 3D indisponível.';$('#enter-office').firstChild.textContent='Conhecer os ambientes ';$('#explore').textContent='Ambientes';visualMode=true;stopTour();stopFollowingWork();document.body.classList.remove('three-ready');document.body.classList.add('visual-mode');$('#fallback-notice').hidden=false;$('#fallback-reason').textContent=reason;$('#render-status').textContent='Referência visual · Contingência';for(const id of ['enter-room','enter-view','start-tour','intro-tour'])$('#'+id).disabled=true;finishLoading();}
-const loadTimer=setTimeout(()=>{if(!office)fallback('O carregamento está demorando. Os registros offline estão disponíveis.');},15000);
+const loadTimer=setTimeout(()=>{if(!office)fallback(VITRINE?'O carregamento está demorando.':'O carregamento está demorando. Os registros offline estão disponíveis.');},15000);
 async function boot(){
   if(new URLSearchParams(location.search).has('fallback')){clearTimeout(loadTimer);fallback('Contingência ativada. A imagem é a referência arquitetônica; a navegação 3D não está ativa.');return;}
   try{
@@ -278,7 +280,7 @@ async function boot(){
     syncCaps();capsTimer=setInterval(()=>{if(!document.hidden)syncCaps();},4000);
     visualMode=false;$('.intro-note').textContent='3D em tempo real. Escolha seu caminho.';$('#enter-office').firstChild.textContent='Explorar o escritório ';$('#explore').textContent='Explorar 3D';document.body.classList.remove('visual-mode');document.body.classList.add('three-ready');$('#fallback-notice').hidden=true;syncMotion(office.diagnostics().agents);clearTimeout(loadTimer);finishLoading();if(operations.isWorking())operations.setFollowing(true);
     const hash=location.hash.slice(1);if(hash.startsWith('inside-floor-')&&floorSpecs[hash.slice(13)]){interior=true;setMode('walk');office.enter('control',true);chooseFloor(hash.slice(13));}else if(hash.startsWith('floor-')&&floorSpecs[hash.slice(6)])chooseFloor(hash.slice(6));else if(hash.startsWith('inside-')&&rooms[hash.slice(7)])enterRoom(hash.slice(7));else if(rooms[hash])selectZone(hash,{instant:true});else if(hash==='tour')startTour();else if(hash==='explore')explore();
-  }catch(error){clearTimeout(loadTimer);console.error('AERA: cena indisponível',error);fallback('WebGL não disponível. Abra os registros offline para apresentar sem renderização 3D.');}
+  }catch(error){clearTimeout(loadTimer);console.error('AERA: cena indisponível',error);fallback(VITRINE?'Navegação 3D não disponível neste navegador.':'WebGL não disponível. Abra os registros offline para apresentar sem renderização 3D.');}
 }
 window.aera={selectZone,startTour,enterRoom,nayra,voz,get state(){return {selected,mode,floor,interior,working,visualMode,ready:!!office,tour:{active:tour.active,paused:tour.paused,index:tour.index}};},get diagnostics(){return office?.diagnostics();}};
 boot();

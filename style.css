@@ -365,3 +365,9 @@ dialog::backdrop{background:#0a0a0a99;backdrop-filter:blur(4px)}
 /* C85 orbe é a imagem da NAYRA: na barra da conversa precisa de mais área para o rosto ser lido. */
 .nayra-live-orb:has(.orb-canvas){flex:0 0 132px;height:132px}
 @media(max-width:900px){.nayra-live-orb:has(.orb-canvas){flex-basis:92px;height:92px}}
+
+/* C86 vitrine: o site público mostra o prédio e a NAYRA, sem o que depende do servidor no Mac. */
+body.vitrine #open-brief,body.vitrine #agent-activate,body.vitrine #voice-listen,body.vitrine #present-toggle,body.vitrine #present-badge,body.vitrine #system-mode,body.vitrine #nayra-replay,body.vitrine #nayra-count,body.vitrine footer a[href*="presentation"],body.vitrine #fallback-notice a{display:none}
+body.vitrine .nayra-call .nayra-name{display:inline}
+body.vitrine .nayra-call{margin-left:auto}
+body.vitrine .nayra-note{font-size:14px;line-height:1.5;color:var(--muted);max-width:540px}

@@ -1,3 +1,4 @@
+import {VITRINE} from './vitrine.js';
 // Real work is owned by the server. Closing this panel or orbiting never cancels a job.
 export function initOperations({onOpen=()=>{},onClose=()=>{},onBusy=()=>{},onStage=()=>{},onStopFollowing=()=>{},onJob=()=>{},onTab=()=>{},onReplay=()=>{},selection=()=>({client_id:'',project_id:''})}={}) {
   const $=s=>document.querySelector(s);
@@ -8,6 +9,7 @@ export function initOperations({onOpen=()=>{},onClose=()=>{},onBusy=()=>{},onSta
   const cardLabels={aguardando:'Pronto para sua decisão',parcial:'Parcial · pendente',aprovado:'Aprovado',ajuste:'Ajuste em andamento',descartado:'Descartado',superado:'Superado'};
   const channelLabels={'instagram-feed':'Instagram feed · 4:5','instagram-stories':'Instagram stories · 9:16','linkedin-feed':'LinkedIn feed · 16:9'};
   async function api(path,{method='GET',body}={}) {
+    if(VITRINE)throw new Error('Disponível só no escritório.');
     let response;
     try{response=await fetch('/api/'+path,{method,headers:body?{'Content-Type':'application/json','X-Aera-Client':'1'}:undefined,body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(path==='connect'?70000:12000)});}
     catch{throw new Error('O serviço local não respondeu. Inicie a versão atual com INICIAR_DEMO.command.');}

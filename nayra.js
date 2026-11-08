@@ -1,3 +1,4 @@
+import {VITRINE} from './vitrine.js';
 // NAYRA, first cut (C37 to C45; voice F1 in C80). Speaks only when called; on open the office shows a count, nothing more.
 // The script comes from /api/nayra/briefing (rows of the office store). The orb pulses on the words she says.
 export function initNayra({api,openJob,openPanel}) {
@@ -15,7 +16,7 @@ export function initNayra({api,openJob,openPanel}) {
   const query=()=>'nayra/briefing'+(heard()?'?since='+encodeURIComponent(heard()):'');
 
   async function refreshCount(){
-    if(playing||document.hidden)return;
+    if(VITRINE||playing||document.hidden)return;
     try{const b=await api(query());const badge=$('#nayra-count');badge.hidden=!b.count;badge.textContent=String(b.count);$('#nayra-call').dataset.attention=String(!!b.attention);
       $('#nayra-call').title=b.count?`NAYRA tem ${b.count} ${b.count===1?'item':'itens'} para você. Clique para ouvir.`:'NAYRA · nada pendente. Clique para ouvir.';}
     catch{$('#nayra-count').hidden=true;}
@@ -117,7 +118,13 @@ export function initNayra({api,openJob,openPanel}) {
     return li;
   }
 
+  // C86: on the public site she introduces herself in text. No office data, no voice, no credits.
+  function showcase(){
+    run++;caption.textContent='Oi, eu sou a NAYRA. Na AERA, uma oportunidade vai da primeira ideia à primeira versão rodando.';
+    note.textContent='Neste prédio, ARI coordena MAYA, NOA, JOHN, LEO e NINA. Explore as salas para conhecer cada um.';
+  }
   async function play(){
+    if(VITRINE){showcase();return;}
     const id=++run;playing=true;synth?.cancel();stopVoice();unlockAudio();f1Failed='';cards.replaceChildren();caption.textContent='';note.textContent='';
     try{data=await api(query());}catch(e){caption.textContent='Não consegui ler o escritório agora.';note.textContent=e.message;playing=false;return;}
     // If the browser keeps the sound locked (briefing not opened by a click), the Mac voice speaks instead.

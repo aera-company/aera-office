@@ -1,7 +1,10 @@
+import {VITRINE} from './vitrine.js';
 // NAYRA by voice (C49 to C60): presentation mode, the "Oi, NAYRA" listener and the live conversation with the ElevenLabs agent.
 // The listener is the browser's speech recognition (audio goes to Google in Chrome, Apple in Safari) and only waits for phrases.
 // The conversation itself runs on the ElevenLabs agent; credits are spent only while it is open.
 export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJob,onPresentation=()=>{}}) {
+  // C86: on the public site there is no listener, no microphone request and no conversation.
+  if(VITRINE)return {hear(){},converse(){},follow(){},textTest(){},endConversation(){},setPresentation(){},presenting:false,listening:false,talking:false};
   // Safari (and Chrome before any click) keeps audio contexts suspended unless started by a click or key.
   // The conversation starts by voice, so every audio context the page creates is tracked and resumed on the next interaction.
   const contexts=new Set();
