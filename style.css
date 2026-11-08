@@ -371,3 +371,14 @@ body.vitrine #open-brief,body.vitrine #agent-activate,body.vitrine #voice-listen
 body.vitrine .nayra-call .nayra-name{display:inline}
 body.vitrine .nayra-call{margin-left:auto}
 body.vitrine .nayra-note{font-size:14px;line-height:1.5;color:var(--muted);max-width:540px}
+
+/* C87 conversa no site público, com código de acesso. */
+.nayra-controls .nayra-talk-open{background:var(--ink);color:#0a0a0a;border-color:var(--ink);font-weight:500}
+.nayra-talk{width:100%;max-width:340px;margin-top:22px;text-align:left}
+.nayra-talk[hidden]{display:none}
+.nayra-talk label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
+.nayra-talk div{display:flex;gap:8px}
+.nayra-talk input{flex:1;min-width:0;min-height:40px;padding:0 12px;background:rgba(10,10,10,.6);border:1px solid var(--line);color:var(--ink);font-size:16px;border-radius:0}
+.nayra-talk button{min-height:40px;padding:0 16px;border:1px solid var(--ink);background:var(--ink);color:#0a0a0a;font-size:12px;border-radius:0}
+.nayra-talk button:disabled{opacity:.5}
+.nayra-talk p{min-height:1.2em;margin:8px 0 0;font-size:12px;color:#e7b4a8}

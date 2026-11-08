@@ -266,7 +266,19 @@ const voz=initNayraVoz({api:operations.api,briefing:()=>nayra.open(),closeBriefi
   openJob(id){stopTour();if(!operations.isOpen())operations.open();operations.selectJob(id);},
   onPresentation(){operations.refresh(false);syncCaps();nayra.refreshCount();if(operations.isOpen())panel?.renderSummary();}});
 $('#nayra-call').onclick=()=>voz.presenting?voz.converse():nayra.open();
-if(VITRINE){document.body.classList.add('vitrine');$('#nayra-call').title='Conhecer a NAYRA';$('#nayra-title').textContent='NAYRA · AERA AI Office';}
+if(VITRINE){
+  document.body.classList.add('vitrine');$('#nayra-call').title='Conhecer a NAYRA';$('#nayra-title').textContent='NAYRA · AERA AI Office';
+  // C87: talking on the public site needs the access code Tiago gives to a guest.
+  const open=$('#nayra-talk-open'),form=$('#nayra-talk'),code=$('#nayra-code'),enter=$('#nayra-talk-enter'),error=$('#nayra-talk-error');
+  open.hidden=false;
+  open.onclick=()=>{open.hidden=true;form.hidden=false;error.textContent='';code.focus();};
+  form.onsubmit=async e=>{
+    e.preventDefault();const value=code.value;code.value='';enter.disabled=true;error.textContent='Verificando…';
+    try{await voz.publicTalk(value);error.textContent='';form.hidden=true;open.hidden=false;}
+    catch(failure){error.textContent=failure.message;code.focus();}
+    finally{enter.disabled=false;}
+  };
+}
 // The orb is drawn in code (ring of fine lines, reference from Tiago 02/11); it only animates while its stage is on screen.
 mountOrb($('#nayra-orb'),{lines:88,points:260,mesh:true,image:'./nayra/orbe.webp'});mountOrb($('#nayra-live-orb'),{lines:44,points:180,mesh:true,image:'./nayra/orbe.webp'});
 function finishLoading(){$('#loading').classList.add('finished');setTimeout(()=>$('#loading').hidden=true,300);}

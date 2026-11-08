@@ -3,8 +3,6 @@ import {VITRINE} from './vitrine.js';
 // The listener is the browser's speech recognition (audio goes to Google in Chrome, Apple in Safari) and only waits for phrases.
 // The conversation itself runs on the ElevenLabs agent; credits are spent only while it is open.
 export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJob,onPresentation=()=>{}}) {
-  // C86: on the public site there is no listener, no microphone request and no conversation.
-  if(VITRINE)return {hear(){},converse(){},follow(){},textTest(){},endConversation(){},setPresentation(){},presenting:false,listening:false,talking:false};
   // Safari (and Chrome before any click) keeps audio contexts suspended unless started by a click or key.
   // The conversation starts by voice, so every audio context the page creates is tracked and resumed on the next interaction.
   const contexts=new Set();
@@ -58,6 +56,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
     b.disabled=!Recognition;
   }
   function startListening(){
+    if(VITRINE)return; // C86: the public site never listens; a conversation there starts only with the access code.
     clearTimeout(restartTimer);
     if(!Recognition||muted||denied||convo||starting||document.hidden||listening)return indicator();
     recog=new Recognition();recog.lang='pt-BR';recog.continuous=true;recog.interimResults=false;
@@ -102,7 +101,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
   function armSilence(){clearTimeout(silenceTimer);silenceTimer=setTimeout(()=>endConversation('silêncio'),SILENCE_MS);}
   function pulse(){const o=$('#nayra-live-orb');let v=0;try{v=convo?.getOutputVolume?.()||0;}catch{}o.style.setProperty('--level',reduce.matches?'0':Math.min(1,v*2.2).toFixed(3));raf=requestAnimationFrame(pulse);}
 
-  async function converse(question=''){
+  async function converse(question='',preset=null){
     if(convo||starting)return;
     closeBriefing();
     starting=true;stopListening();farewell=false;lastZone='';agentSpoke=false;
@@ -111,7 +110,8 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
     try{
       // C79: the office server hands a one-time token made with the ElevenLabs key it keeps; the key never comes here.
       // C84: with Tiago, the whole office and the Tiago agent; with a client (presentation), only that client.
-      const [s,context]=await Promise.all([voiceSession('webrtc'),api(presenting?'nayra/demo-context':'nayra/office-context')]);session=s;ctx=context;
+      // C87: on the public site the token and the context were already handed over after the access code.
+      const [s,context]=preset?[preset,preset.context]:await Promise.all([voiceSession('webrtc'),api(presenting?'nayra/demo-context':'nayra/office-context')]);session=s;ctx=context;
       const {Conversation}=await import('@elevenlabs/client');
       convo=await Conversation.startSession({
         // WebRTC is the SDK default for voice: the browser itself plays her audio, which is what works in Safari.
@@ -143,10 +143,11 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
         }
       });
       // C62: outside presentation it is Tiago talking, not a client; the agent is told so at the start. C83: she calls him Chefe.
-      if(!presenting){try{convo.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Quando falar com ele, chame-o de Chefe, nunca de Tiago, e vá direto ao ponto.');}catch{}}
+      if(!presenting&&!VITRINE){try{convo.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Quando falar com ele, chame-o de Chefe, nunca de Tiago, e vá direto ao ponto.');}catch{}}
       // The question asked together with her name goes in as Tiago's first message.
       if(question){try{caption('cliente',question);convo.sendUserMessage(question);}catch{}}
-      clearTimeout(maxTimer);maxTimer=setTimeout(()=>endConversation('10 minutos'),MAX_MS);
+      // The public site gets a shorter conversation, to keep the spend of a demo small.
+      clearTimeout(maxTimer);maxTimer=setTimeout(()=>endConversation(VITRINE?'5 minutos':'10 minutos'),VITRINE?5*60*1000:MAX_MS);
     }catch(e){
       report('falhou ao abrir',String(e?.name||'')+': '+String(e?.message||e));
       caption('nayra','');note(e.code==='not_found'?'O agente de voz da NAYRA ainda não foi criado.':'Não consegui abrir a conversa: '+(e.message||e)+(session&&!session.protected?' Se a autenticação está ligada no ElevenLabs, salve a chave de voz em Operação › Conectar.':''));
@@ -191,7 +192,16 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
   document.addEventListener('visibilitychange',()=>{if(document.hidden){stopListening();if(convo)endConversation();}else startListening();});
   window.addEventListener('keydown',e=>{if(!live().hidden&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();endConversation();}},true);
   if(!Recognition)report('ouvinte','indisponível neste navegador');
-  syncPresentation();indicator();startListening();
+  if(!VITRINE)syncPresentation();indicator();startListening();
+  // C87: public site. The code is checked by the Vercel function before anything opens; a wrong one stays on the form.
+  async function publicTalk(code){
+    let r;
+    try{r=await fetch('/api/vitrine-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code}),signal:AbortSignal.timeout(15000)});}
+    catch{throw new Error('Não consegui abrir a conversa agora.');}
+    let data={};try{data=await r.json();}catch{}
+    if(!r.ok)throw new Error(data.error||'Não consegui abrir a conversa agora.');
+    converse('',{token:data.token,protected:true,profile:'apresentacao',context:data.context});
+  }
   // Test hook: what the office does when NAYRA says this sentence (camera and job card), without opening a conversation.
   async function follow(text){if(!ctx)ctx=await api(presenting?'nayra/demo-context':'nayra/office-context');lastZone='';react(text);return {zone:lastZone,job:$('#nayra-live-card').dataset.job||''};}
   // Test hook: a real conversation with the agent in text only (no microphone), with the real AERA context.
@@ -213,5 +223,5 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
     try{await c.endSession();}catch{}
     return log;
   }
-  return {hear,converse,follow,textTest,endConversation,setPresentation,get presenting(){return presenting;},get listening(){return listening;},get talking(){return !!convo;}};
+  return {hear,converse,publicTalk,follow,textTest,endConversation,setPresentation,get presenting(){return presenting;},get listening(){return listening;},get talking(){return !!convo;}};
 }

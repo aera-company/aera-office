@@ -3,6 +3,7 @@
 Everything here reads or writes rows of the office store. Nothing is guessed, nothing calls a model.
 Domain: office only (C44). No personal data enters these rows.
 """
+import re
 import datetime
 import json
 import uuid
@@ -359,6 +360,21 @@ def demo_context(store, client_id, max_chars=14000, max_jobs=6, delivery_chars=3
     if len(text) > max_chars:
         text = text[:max_chars].rstrip() + '\n[… contexto cortado no limite]'
     return {'client': client['name'], 'client_id': client_id, 'facts': len(facts), 'jobs': out_jobs, 'text': text}
+
+
+def site_context(store, client_id):
+    """C87: the public site. Only confirmed facts of this client, never work, deliveries, preferences or case lists."""
+    client = store.get_client(client_id)
+    facts = [n for n in client['notes'] if n['level'] == 1 and n['state'] == 'confirmado' and n['kind'] == 'fato'
+             and not re.search(r'\bcases?\b', n['text'], re.I)]
+    lines = ['DEMONSTRAÇÃO NO SITE PÚBLICO DA AERA. Quem fala é um visitante convidado, não o Tiago.', '',
+             f'CLIENTE: {client["name"]}', f'Resumo: {client["summary"] or "sem resumo"}', '', 'FATOS CONFIRMADOS PELO TIAGO:']
+    lines += [f'- {n["text"]}' for n in facts] or ['- nenhum']
+    lines += ['', 'EQUIPE DO ESCRITÓRIO (agentes de IA, não pessoas):']
+    lines += [f'- {name}: {ROLE[name]}, sala {room}' for name, room in
+              (('ARI', 'Comando, andar 02'), ('MAYA', 'Think, estratégia'), ('NOA', 'Create, texto e conceito'), ('JOHN', 'Create, design e arte'), ('LEO', 'Build, tecnologia'), ('NINA', 'Grow, negócios'))]
+    lines += ['', 'TRABALHOS REGISTRADOS: não ficam disponíveis no site. Se perguntarem, diga que isso é mostrado com o Tiago.']
+    return {'client': client['name'], 'facts': len(facts), 'jobs': [], 'text': '\n'.join(lines)}
 
 
 def office_context(store, max_chars=24000, max_jobs=12, delivery_chars=1500):

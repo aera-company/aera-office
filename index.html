@@ -223,7 +223,8 @@
       <p class="nayra-label" id="nayra-title">NAYRA · briefing do escritório</p>
       <p class="nayra-caption" id="nayra-caption" aria-live="polite"></p>
       <p class="nayra-note" id="nayra-note"></p>
-      <div class="nayra-controls"><button type="button" id="nayra-replay">Ouvir de novo</button><button type="button" id="nayra-close">Fechar <span aria-hidden="true">esc</span></button></div>
+      <form id="nayra-talk" class="nayra-talk" hidden><label for="nayra-code">Código de acesso</label><div><input id="nayra-code" type="password" autocomplete="off" spellcheck="false" maxlength="80" required /><button type="submit" id="nayra-talk-enter">Entrar</button></div><p id="nayra-talk-error" role="status"></p></form>
+      <div class="nayra-controls"><button type="button" id="nayra-talk-open" class="nayra-talk-open" hidden>Falar com a NAYRA</button><button type="button" id="nayra-replay">Ouvir de novo</button><button type="button" id="nayra-close">Fechar <span aria-hidden="true">esc</span></button></div>
     </div>
     <ol class="nayra-cards" id="nayra-cards" aria-label="Itens do briefing"></ol>
   </section>

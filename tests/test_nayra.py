@@ -256,6 +256,15 @@ class PresentationTests(unittest.TestCase):
         self.assertEqual(c['client'],'AERA')
         for secret in ('Plano secreto','Cliente Sigiloso','Segredo do outro'):self.assertNotIn(secret,json.dumps(c,ensure_ascii=False))
 
+    def test_site_context_has_only_public_facts(self):
+        # C87: confirmed facts of AERA, nothing else: no work, preferences, case lists or other clients.
+        store=self.server.store
+        store.add_note(self.aera['id'],level=1,kind='preferencia',text='Preferencia interna de tom.',source='Tiago')
+        store.add_note(self.aera['id'],level=1,kind='fato',text='Cases no site: Cliente Exemplo.',source='Tiago')
+        c=nayra.site_context(store,self.aera['id'])
+        self.assertEqual((c['client'],c['facts'],c['jobs']),('AERA',1,[]));self.assertIn('A AERA pensa e constrói.',c['text']);self.assertIn('JOHN',c['text'])
+        for hidden in ('Posts da AERA','Plano secreto','Cliente Sigiloso','Segredo do outro','Preferencia interna','Cliente Exemplo','# Post da AERA'):self.assertNotIn(hidden,c['text'])
+
     def test_agent_id_route(self):
         with self.assertRaises(urllib.error.HTTPError) as e:self.get('/api/nayra/agent')
         self.assertEqual(e.exception.code,404)
