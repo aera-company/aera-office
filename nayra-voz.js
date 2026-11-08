@@ -193,14 +193,14 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
   window.addEventListener('keydown',e=>{if(!live().hidden&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();endConversation();}},true);
   if(!Recognition)report('ouvinte','indisponível neste navegador');
   if(!VITRINE)syncPresentation();indicator();startListening();
-  // C87: public site. The code is checked by the Vercel function before anything opens; a wrong one stays on the form.
-  async function publicTalk(code){
+  // C88: public site. One click asks the Vercel function for a one-time token and opens the conversation.
+  async function publicTalk(){
     let r;
-    try{r=await fetch('/api/vitrine-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code}),signal:AbortSignal.timeout(15000)});}
+    try{r=await fetch('/api/vitrine-session',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(15000)});}
     catch{throw new Error('Não consegui abrir a conversa agora.');}
     let data={};try{data=await r.json();}catch{}
     if(!r.ok)throw new Error(data.error||'Não consegui abrir a conversa agora.');
-    converse('',{token:data.token,protected:true,profile:'apresentacao',context:data.context});
+    await converse('',{token:data.token,protected:true,profile:'apresentacao',context:data.context});
   }
   // Test hook: what the office does when NAYRA says this sentence (camera and job card), without opening a conversation.
   async function follow(text){if(!ctx)ctx=await api(presenting?'nayra/demo-context':'nayra/office-context');lastZone='';react(text);return {zone:lastZone,job:$('#nayra-live-card').dataset.job||''};}

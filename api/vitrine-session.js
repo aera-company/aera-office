@@ -1,13 +1,11 @@
-// Public site voice (C87): a visitor with the access code gets one short-lived ElevenLabs token for the presentation agent.
-// Secrets live only in the Vercel project: ELEVENLABS_API_KEY, NAYRA_ACCESS_CODE and NAYRA_AGENT_ID.
-import {createHash,timingSafeEqual} from 'node:crypto';
+// Public site voice (C88): one click opens a conversation; each one gets a short-lived ElevenLabs token for the presentation agent.
+// Secrets live only in the Vercel project: ELEVENLABS_API_KEY and NAYRA_AGENT_ID. The real spending ceiling is the daily limit set on the agent.
 import context from './_site-context.js';
 
-const WINDOW_MS=10*60*1000,MAX_WRONG=8,MAX_TOKENS=12;
+const WINDOW_MS=10*60*1000,MAX_TOKENS=4;
 const hits=new Map();
-const digest=value=>createHash('sha256').update(String(value)).digest();
 
-// Best effort per function instance: it slows guessing and repeated openings, it is not a global counter.
+// Best effort per function instance: it slows repeated openings, it is not a global counter.
 function count(key,now){
   const list=(hits.get(key)||[]).filter(t=>now-t<WINDOW_MS);
   hits.set(key,list);
@@ -21,16 +19,11 @@ export default async function handler(req,res){
   let origin='';
   try{origin=new URL(req.headers.origin||'').host;}catch{}
   if(!origin||origin!==req.headers.host)return res.status(403).json({error:'Origem não autorizada.'});
-  const {ELEVENLABS_API_KEY:key,NAYRA_ACCESS_CODE:access,NAYRA_AGENT_ID:agent}=process.env;
-  if(!key||!access||!agent)return res.status(503).json({error:'A conversa ainda não foi ligada neste site.'});
+  const {ELEVENLABS_API_KEY:key,NAYRA_AGENT_ID:agent}=process.env;
+  if(!key||!agent)return res.status(503).json({error:'A conversa ainda não foi ligada neste site.'});
   const ip=String(req.headers['x-forwarded-for']||req.headers['x-real-ip']||'desconhecido').split(',')[0].trim();
-  const now=Date.now(),wrong=count('wrong:'+ip,now),opened=count('open:'+ip,now);
-  if(wrong.length>=MAX_WRONG||opened.length>=MAX_TOKENS)return res.status(429).json({error:'Muitas tentativas. Tente de novo em alguns minutos.'});
-  const code=typeof req.body?.code==='string'?req.body.code.trim():'';
-  if(!code||code.length>80||!timingSafeEqual(digest(code),digest(access))){
-    wrong.push(now);
-    return res.status(401).json({error:'Código incorreto.'});
-  }
+  const now=Date.now(),opened=count('open:'+ip,now);
+  if(opened.length>=MAX_TOKENS)return res.status(429).json({error:'Muitas conversas seguidas. Tente de novo em alguns minutos.'});
   let token='';
   try{
     const response=await fetch('https://api.elevenlabs.io/v1/convai/conversation/token?'+new URLSearchParams({agent_id:agent}),{headers:{'xi-api-key':key},signal:AbortSignal.timeout(12000)});

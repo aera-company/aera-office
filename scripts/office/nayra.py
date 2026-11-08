@@ -367,7 +367,7 @@ def site_context(store, client_id):
     client = store.get_client(client_id)
     facts = [n for n in client['notes'] if n['level'] == 1 and n['state'] == 'confirmado' and n['kind'] == 'fato'
              and not re.search(r'\bcases?\b', n['text'], re.I)]
-    lines = ['DEMONSTRAÇÃO NO SITE PÚBLICO DA AERA. Quem fala é um visitante convidado, não o Tiago.', '',
+    lines = ['DEMONSTRAÇÃO NO SITE PÚBLICO DA AERA. Quem fala é um visitante do site, não o Tiago.', '',
              f'CLIENTE: {client["name"]}', f'Resumo: {client["summary"] or "sem resumo"}', '', 'FATOS CONFIRMADOS PELO TIAGO:']
     lines += [f'- {n["text"]}' for n in facts] or ['- nenhum']
     lines += ['', 'EQUIPE DO ESCRITÓRIO (agentes de IA, não pessoas):']

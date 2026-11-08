@@ -268,15 +268,14 @@ const voz=initNayraVoz({api:operations.api,briefing:()=>nayra.open(),closeBriefi
 $('#nayra-call').onclick=()=>voz.presenting?voz.converse():nayra.open();
 if(VITRINE){
   document.body.classList.add('vitrine');$('#nayra-call').title='Conhecer a NAYRA';$('#nayra-title').textContent='NAYRA · AERA AI Office';
-  // C87: talking on the public site needs the access code Tiago gives to a guest.
-  const open=$('#nayra-talk-open'),form=$('#nayra-talk'),code=$('#nayra-code'),enter=$('#nayra-talk-enter'),error=$('#nayra-talk-error');
-  open.hidden=false;
-  open.onclick=()=>{open.hidden=true;form.hidden=false;error.textContent='';code.focus();};
-  form.onsubmit=async e=>{
-    e.preventDefault();const value=code.value;code.value='';enter.disabled=true;error.textContent='Verificando…';
-    try{await voz.publicTalk(value);error.textContent='';form.hidden=true;open.hidden=false;}
-    catch(failure){error.textContent=failure.message;code.focus();}
-    finally{enter.disabled=false;}
+  // C88: on the public site one click opens the conversation; the limits live in the Vercel function and in the ElevenLabs agent.
+  const talk=$('#nayra-talk-open'),error=$('#nayra-talk-error');
+  talk.hidden=false;
+  talk.onclick=async()=>{
+    talk.disabled=true;error.textContent='';
+    try{await voz.publicTalk();}
+    catch(failure){error.textContent=failure.message;}
+    finally{talk.disabled=false;}
   };
 }
 // The orb is drawn in code (ring of fine lines, reference from Tiago 02/11); it only animates while its stage is on screen.
