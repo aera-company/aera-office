@@ -15,6 +15,7 @@ from office.engine import Engine
 from office.fetch import read_link
 from office import capabilities, jobs, artifacts, nayra
 from office.image_provider import MagnificProvider, NoImageProvider
+from office.voice import VoiceAccess
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 
@@ -105,6 +106,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 file=pathlib.Path(self.server.runtime_dir)/'nayra-agent.json'
                 if not file.is_file():raise OperationError('O agente de voz da NAYRA ainda não foi criado.', 'not_found', 404)
                 return self.respond(200,{'agent_id':json.loads(file.read_text())['agent_id']})
+            if path=='/api/nayra/voice-status':return self.respond(200,self.server.voice.status())
+            if path=='/api/nayra/office-context':
+                # C84: the whole office, only for Tiago. In presentation it answers with the presented client alone.
+                if self.scope():return self.respond(200,nayra.demo_context(store,self.scope()))
+                return self.respond(200,nayra.office_context(store))
             if path=='/api/nayra/demo-context':
                 # Context for the voice agent: always one client only, never the whole office.
                 client_id=self.scope() or nayra.resolve_client(store,'AERA')
@@ -189,6 +195,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 host=self.headers.get('Host','127.0.0.1:8080')
                 url=image.begin_login(f'http://{host}/api/image/callback')
                 return self.respond(200,{'login_url':url,'note':'Abra este endereço no navegador para autorizar. O token volta ao servidor local, nunca ao painel.'})
+            if path=='/api/nayra/voice-session':
+                # C79: one short-lived credential per conversation; the ElevenLabs key never reaches the browser.
+                # C84: outside presentation it is Tiago, so the Tiago agent; in presentation, the client agent.
+                return self.respond(200,self.server.voice.session('websocket' if data.get('connection')=='websocket' else 'webrtc',tiago=not self.scope()))
+            if path=='/api/nayra/speak':
+                # C80: one briefing sentence in the NAYRA voice (mp3). Paid on first use, cached after.
+                audio=self.server.voice.speak(data.get('text',''))
+                self.send_response(200);self.send_header('Content-Type','audio/mpeg');self.send_header('Content-Length',str(len(audio)));self.end_headers()
+                try:self.wfile.write(audio)
+                except (BrokenPipeError,ConnectionResetError):pass
+                return
+            if path=='/api/nayra/voice-key':return self.respond(200,self.server.voice.connect(data.get('key','')))
+            if path=='/api/nayra/voice-key-remove':return self.respond(200,self.server.voice.disconnect())
             if path=='/api/nayra/client-log':
                 # Voice diagnostics from the browser (connection state and errors only), written to the server log.
                 event=str(data.get('event',''))[:60];detail=str(data.get('detail',''))[:600];agent=str(data.get('agent',''))[:160]
@@ -324,7 +343,7 @@ class Server(http.server.ThreadingHTTPServer):
         super().server_close()
 
 
-def create_server(port=8080, runtime=None, provider=None, start_worker=True, image_provider=None):
+def create_server(port=8080, runtime=None, provider=None, start_worker=True, image_provider=None, voice=None):
     if not (ROOT/'dist/index.html').is_file():raise RuntimeError('Build ausente. Execute npm ci && npm run build.')
     runtime=pathlib.Path(runtime or ROOT/'runtime')
     runtime.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -332,6 +351,7 @@ def create_server(port=8080, runtime=None, provider=None, start_worker=True, ima
     server.runtime_dir=str(runtime)
     server.store=Store(runtime/'office.sqlite3')
     server.provider=provider or ClaudeProvider(ROOT,runtime)
+    server.voice=voice or VoiceAccess(ROOT,runtime)
     registry=capabilities.load()
     problems=capabilities.validate(registry)
     if problems:

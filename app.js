@@ -266,7 +266,7 @@ const voz=initNayraVoz({api:operations.api,briefing:()=>nayra.open(),closeBriefi
   onPresentation(){operations.refresh(false);syncCaps();nayra.refreshCount();if(operations.isOpen())panel?.renderSummary();}});
 $('#nayra-call').onclick=()=>voz.presenting?voz.converse():nayra.open();
 // The orb is drawn in code (ring of fine lines, reference from Tiago 02/11); it only animates while its stage is on screen.
-mountOrb($('#nayra-orb'));mountOrb($('#nayra-live-orb'),{lines:22,points:120});
+mountOrb($('#nayra-orb'),{lines:88,points:260,mesh:true,image:'./nayra/orbe.webp'});mountOrb($('#nayra-live-orb'),{lines:44,points:180,mesh:true,image:'./nayra/orbe.webp'});
 function finishLoading(){$('#loading').classList.add('finished');setTimeout(()=>$('#loading').hidden=true,300);}
 function fallback(reason){$('.intro-note').textContent='Modo visual · Navegação 3D indisponível.';$('#enter-office').firstChild.textContent='Conhecer os ambientes ';$('#explore').textContent='Ambientes';visualMode=true;stopTour();stopFollowingWork();document.body.classList.remove('three-ready');document.body.classList.add('visual-mode');$('#fallback-notice').hidden=false;$('#fallback-reason').textContent=reason;$('#render-status').textContent='Referência visual · Contingência';for(const id of ['enter-room','enter-view','start-tour','intro-tour'])$('#'+id).disabled=true;finishLoading();}
 const loadTimer=setTimeout(()=>{if(!office)fallback('O carregamento está demorando. Os registros offline estão disponíveis.');},15000);

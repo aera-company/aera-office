@@ -10,12 +10,12 @@ class CredentialStoreError(Exception):
 
 
 class MacKeychain:
-    def __init__(self, project, service=None):
+    def __init__(self, project, service=None, kind='claude', account='anthropic-api-key', label='AERA AI OFFICE — Claude API'):
         if sys.platform != 'darwin':
             raise CredentialStoreError('Chaves do macOS indisponível.')
         scope = hashlib.sha256(str(project.resolve()).encode()).hexdigest()[:16]
-        self.service = service or 'com.aera.ai-office.claude.' + scope
-        self.account = 'anthropic-api-key'
+        self.service = service or f'com.aera.ai-office.{kind}.' + scope
+        self.account, self.label = account, label
         try:
             self.cf = c.CDLL('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation')
             self.sec = c.CDLL('/System/Library/Frameworks/Security.framework/Security')
@@ -115,7 +115,7 @@ class MacKeychain:
         with self.dictionary(self.query()) as query, self.dictionary(value) as attrs:
             status = self.sec.SecItemUpdate(query, attrs)
             if status == -25300:
-                with self.dictionary({**self.query(), **value, 'kSecAttrLabel': 'AERA AI OFFICE — Claude API'}) as new:
+                with self.dictionary({**self.query(), **value, 'kSecAttrLabel': self.label}) as new:
                     status = self.sec.SecItemAdd(new, None)
                 if status == -25299:  # A concurrent creator won; update only our item.
                     status = self.sec.SecItemUpdate(query, attrs)

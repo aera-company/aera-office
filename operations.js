@@ -249,7 +249,16 @@ export function initOperations({onOpen=()=>{},onClose=()=>{},onBusy=()=>{},onSta
   const dialog=$('#connection-dialog');
   function sourceUI(){$('#ops-key-row').hidden=false;$('#ops-source-help').textContent='A chave fica no servidor local e, se disponível, no Chaves do macOS. Ela não é salva no navegador.';}
   $('#ops-source').onchange=sourceUI;
-  $('#ops-connect-open').onclick=()=>{sourceUI();$('#ops-connect-notice').textContent='';dialog.showModal();};$('#ops-connect-close').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{$('#ops-key').value='';});
+  // C79: NAYRA's voice key (ElevenLabs). Typed here, kept in the Keychain by the server, never sent back.
+  function voiceUI(v){$('#ops-voice-state').textContent=v.ready?'Chave de voz salva. Cada conversa da NAYRA abre com uma senha temporária.':'Sem chave de voz. A NAYRA abre a conversa pelo ID público do agente; com a autenticação ligada no ElevenLabs, ela só conecta depois de salvar a chave.';$('#ops-voice-remove').hidden=!v.ready;}
+  async function refreshVoice(){try{voiceUI(await api('nayra/voice-status'));}catch(error){$('#ops-voice-state').textContent=error.message;}}
+  $('#ops-voice-save').onclick=async()=>{
+    const key=$('#ops-voice-key').value;$('#ops-voice-key').value='';$('#ops-voice-save').disabled=true;$('#ops-connect-notice').textContent='Verificando a chave no ElevenLabs…';
+    try{const v=await api('nayra/voice-key',{method:'POST',body:{key}});voiceUI(v);$('#ops-connect-notice').textContent=v.warning||'Chave de voz salva. Agora você pode ligar a autenticação do agente no ElevenLabs.';}
+    catch(error){$('#ops-connect-notice').textContent=error.message;}finally{$('#ops-voice-save').disabled=false;}
+  };
+  $('#ops-voice-remove').onclick=async()=>{try{voiceUI(await api('nayra/voice-key-remove',{method:'POST',body:{}}));$('#ops-connect-notice').textContent='Chave de voz removida deste escritório.';}catch(error){$('#ops-connect-notice').textContent=error.message;}};
+  $('#ops-connect-open').onclick=()=>{sourceUI();refreshVoice();$('#ops-connect-notice').textContent='';dialog.showModal();};$('#ops-connect-close').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{$('#ops-key').value='';$('#ops-voice-key').value='';});
   $('#ops-connect-form').onsubmit=async e=>{
     e.preventDefault();const key=$('#ops-key').value;$('#ops-key').value='';$('#ops-connect-submit').disabled=true;$('#ops-connect-notice').textContent='Verificando acesso ao modelo…';
     try{connection=await api('connect',{method:'POST',body:{source:$('#ops-source').value,key}});connectionUI();$('#ops-connect-notice').textContent=connection.warning||'Conexão verificada. Você já pode enviar um pedido real.';await refresh(false);}

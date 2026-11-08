@@ -30,7 +30,7 @@ class BriefingTests(unittest.TestCase):
 
     def test_empty_office_says_nothing_waits(self):
         b=nayra.briefing(self.store,local_hour=9)
-        self.assertEqual(b['items'],[]);self.assertEqual(b['count'],0);self.assertEqual(b['opening'],'Bom dia, Tiago. Tudo em dia. Nada espera por você.')
+        self.assertEqual(b['items'],[]);self.assertEqual(b['count'],0);self.assertEqual(b['opening'],'Bom dia, Chefe. Tudo em dia. Nada espera por você.')
 
     def test_urgency_order_you_ready_stuck(self):
         # A failed session job, then real engine work awaiting approval, then a session step that finished.
@@ -48,7 +48,7 @@ class BriefingTests(unittest.TestCase):
         self.assertTrue(any('imagens esperam o executor' in i['text'] for i in stuck_items))
         # Work on the job already reported above is not repeated as "ready".
         self.assertFalse(any(i['group']=='pronto' and i['job_id']==job['id'] for i in b['items']))
-        self.assertTrue(b['opening'].startswith('Boa tarde, Tiago. 1 coisa depende de você.'))
+        self.assertTrue(b['opening'].startswith('Boa tarde, Chefe. 1 coisa depende de você.'))
         self.assertTrue(all(i['zone'] for i in b['items']))
         later=nayra.briefing(self.store,since=datetime.datetime.now(datetime.timezone.utc).isoformat())
         self.assertFalse(any(i['group']=='pronto' for i in later['items']),'ready resets after Tiago hears it; pending items stay')
@@ -245,6 +245,16 @@ class PresentationTests(unittest.TestCase):
         c=self.get('/api/nayra/demo-context')
         self.assertEqual((c['client'],c['facts'],[j['title'] for j in c['jobs']]),('AERA',1,['Posts da AERA']))
         self.assertIn('# Post da AERA',c['text']);self.assertIn('NOA escreveu os posts',c['text']);self.assertNotIn('secreto',c['text'])
+
+    def test_office_context_is_whole_office_only_for_tiago(self):
+        # C84: outside presentation the Tiago agent hears every client; in presentation the route falls back to AERA.
+        c=self.get('/api/nayra/office-context')
+        self.assertEqual(sorted(j['title'] for j in c['jobs']),['Plano secreto','Posts da AERA'])
+        for text in ('Cliente Sigiloso','Segredo do outro cliente.','MAYA leu o plano secreto','JOHN'):self.assertIn(text,c['text'])
+        self.post('/api/presentation',{'on':True})
+        c=self.get('/api/nayra/office-context')
+        self.assertEqual(c['client'],'AERA')
+        for secret in ('Plano secreto','Cliente Sigiloso','Segredo do outro'):self.assertNotIn(secret,json.dumps(c,ensure_ascii=False))
 
     def test_agent_id_route(self):
         with self.assertRaises(urllib.error.HTTPError) as e:self.get('/api/nayra/agent')

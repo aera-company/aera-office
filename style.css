@@ -342,3 +342,26 @@ dialog::backdrop{background:#0a0a0a99;backdrop-filter:blur(4px)}
 .voice-listen[data-heard=frase] span:last-child{color:var(--muted)}
 .agent-switch{display:flex;gap:4px;margin:14px 0 0}.agent-switch button{flex:1;min-height:32px;border:1px solid var(--line);background:transparent;color:#aebcc0;font-size:10px;letter-spacing:.04em}.agent-switch button[aria-pressed=true]{border-color:#dabb9288;background:#dabb9214;color:#f0d5b0}
 .ops-batch{border:1px solid #dabb9255;background:#dabb920a;padding:12px 14px;margin:12px 0}.ops-batch strong{display:block;font-weight:500;font-size:12px;color:#f0d5b0}.ops-batch p{font-size:11px;line-height:1.6;color:#b5c5c9;margin:6px 0 10px}.ops-batch .ops-batch-actions{display:flex;gap:6px}.ops-batch button{min-height:34px;padding:0 12px;font-size:11px;border:1px solid #dabb9277;background:transparent;color:#e6cba5}.ops-batch button.primary-batch{background:#ddc6a5;color:#182225;border-color:#ddc6a5}.ops-batch[data-state=liberado] strong,.ops-batch[data-state=gerado] strong{color:#b8d0b6}.ops-batch[data-state=recusado]{opacity:.6}
+
+/* C79 voz da NAYRA: campo da chave no diálogo de conexão */
+#connection-dialog .ops-voice-row label{display:block;margin:14px 0 9px;font-size:12px;color:#d7e0e1;text-transform:none;letter-spacing:0;font-weight:400}
+#connection-dialog .ops-voice-connection button+button{margin-left:8px}
+
+/* C81 briefing centrado: orbe grande no meio, textos e controles logo abaixo; itens do briefing seguem numa coluna central. */
+.nayra-stage{grid-template-columns:minmax(0,1fr);justify-items:center;align-content:center;gap:40px;padding:88px 6vw 64px}
+.nayra-voice{width:100%;max-width:760px}
+.nayra-orb:has(.orb-canvas){width:min(52vh,560px);height:min(52vh,560px);margin-bottom:22px}
+.nayra-stage:has(.nayra-card) .nayra-orb:has(.orb-canvas){width:min(40vh,440px);height:min(40vh,440px)}
+.nayra-caption{max-width:720px;text-align:center;text-wrap:balance}
+.nayra-controls{justify-content:center}
+.nayra-cards{width:100%;max-width:640px}
+.nayra-cards:empty{display:none}
+@media(max-width:900px){.nayra-stage{gap:24px;padding:84px 16px 28px;align-content:start}.nayra-orb:has(.orb-canvas),.nayra-stage:has(.nayra-card) .nayra-orb:has(.orb-canvas){width:min(78vw,340px);height:min(78vw,340px)}}
+
+/* C82 rosto também na conversa ao vivo: orbe um pouco maior para o rosto ser lido. */
+.nayra-live-orb:has(.orb-canvas){flex:0 0 104px;height:104px}
+@media(max-width:900px){.nayra-live-orb:has(.orb-canvas){flex-basis:76px;height:76px}}
+
+/* C85 orbe é a imagem da NAYRA: na barra da conversa precisa de mais área para o rosto ser lido. */
+.nayra-live-orb:has(.orb-canvas){flex:0 0 132px;height:132px}
+@media(max-width:900px){.nayra-live-orb:has(.orb-canvas){flex-basis:92px;height:92px}}

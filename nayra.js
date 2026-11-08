@@ -1,4 +1,4 @@
-// NAYRA, first cut (C37 to C45). Speaks only when called; on open the office shows a count, nothing more.
+// NAYRA, first cut (C37 to C45; voice F1 in C80). Speaks only when called; on open the office shows a count, nothing more.
 // The script comes from /api/nayra/briefing (rows of the office store). The orb pulses on the words she says.
 export function initNayra({api,openJob,openPanel}) {
   const $=s=>document.querySelector(s);
@@ -7,6 +7,8 @@ export function initNayra({api,openJob,openPanel}) {
   const synth='speechSynthesis' in window?window.speechSynthesis:null;
   const reduce=matchMedia('(prefers-reduced-motion: reduce)');
   let data=null,playing=false,run=0,level=0,raf=0,countTimer=0,voice=null,lastFocus=null;
+  // C80: the briefing speaks with the NAYRA voice (ElevenLabs, made by the office server). Luciana stays as the fallback.
+  let audio=null,analyser=null,wave=null,source=null,f1Failed='';
 
   const heard=()=>{try{return localStorage.getItem('aera.nayra.heard')||'';}catch{return '';}};
   const markHeard=()=>{try{localStorage.setItem('aera.nayra.heard',new Date().toISOString());}catch{}};
@@ -33,10 +35,46 @@ export function initNayra({api,openJob,openPanel}) {
   }
 
   // Pulse: each spoken word (boundary event) lifts the light; it decays between words. No sound analysis, no invention.
-  function tick(){level*=.9;orb.style.setProperty('--level',level.toFixed(3));raf=requestAnimationFrame(tick);}
+  function tick(){
+    level*=.9;
+    // While the F1 voice plays, the light follows the real loudness of her audio.
+    if(source&&analyser&&!reduce.matches){analyser.getByteTimeDomainData(wave);let sum=0;for(const v of wave){const d=(v-128)/128;sum+=d*d;}level=Math.max(level,Math.min(1,Math.sqrt(sum/wave.length)*4.5));}
+    orb.style.setProperty('--level',level.toFixed(3));raf=requestAnimationFrame(tick);
+  }
+  // The audio context is created inside the click that opens the briefing, so Safari lets it play after the network wait.
+  function unlockAudio(){
+    try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+      if(!audio){audio=new C();analyser=audio.createAnalyser();analyser.fftSize=512;wave=new Uint8Array(analyser.fftSize);analyser.connect(audio.destination);}
+      audio.resume?.();}catch{audio=null;}
+  }
+  async function fetchVoice(text){
+    const r=await fetch('/api/nayra/speak',{method:'POST',headers:{'Content-Type':'application/json','X-Aera-Client':'1'},body:JSON.stringify({text}),signal:AbortSignal.timeout(25000)});
+    if(!r.ok){let m='';try{m=(await r.json()).error;}catch{}throw new Error(m||'voz indisponível');}
+    return audio.decodeAudioData(await r.arrayBuffer());
+  }
+  function stopVoice(){try{source?.stop();}catch{}source=null;}
   const bump=()=>{if(!reduce.matches)level=Math.min(1,level+.55);};
 
-  function say(text,id){
+  async function say(text,id,pending){
+    if(id!==run)return;
+    if(pending&&!f1Failed){
+      try{
+        const buffer=await pending;if(id!==run)return;
+        caption.textContent=text;
+        await new Promise(resolve=>{
+          const s=audio.createBufferSource();s.buffer=buffer;s.connect(analyser);source=s;orb.classList.add('speaking');
+          s.onended=()=>{if(source===s)source=null;orb.classList.remove('speaking');resolve();};s.start();
+        });
+        return;
+      }catch(e){
+        if(id!==run)return;
+        f1Failed=e.message||'voz indisponível';note.textContent=`${f1Failed.replace(/\.$/,'')}. Por enquanto, o briefing usa a voz do Mac.`;
+        api('nayra/client-log',{method:'POST',body:{event:'briefing',detail:'voz F1 falhou: '+f1Failed,agent:navigator.userAgent.slice(0,160)}}).catch(()=>{});
+      }
+    }
+    return sayMac(text,id);
+  }
+  function sayMac(text,id){
     return new Promise(resolve=>{
       if(id!==run){resolve();return;}
       caption.textContent=text;
@@ -80,18 +118,24 @@ export function initNayra({api,openJob,openPanel}) {
   }
 
   async function play(){
-    const id=++run;playing=true;synth?.cancel();cards.replaceChildren();caption.textContent='';note.textContent='';
+    const id=++run;playing=true;synth?.cancel();stopVoice();unlockAudio();f1Failed='';cards.replaceChildren();caption.textContent='';note.textContent='';
     try{data=await api(query());}catch(e){caption.textContent='Não consegui ler o escritório agora.';note.textContent=e.message;playing=false;return;}
+    // If the browser keeps the sound locked (briefing not opened by a click), the Mac voice speaks instead.
+    try{await Promise.race([audio?.resume?.(),new Promise(r=>setTimeout(r,600))]);}catch{}
+    let f1=false;try{f1=audio?.state==='running'&&(await api('nayra/voice-status')).ready;}catch{}
     await voiceReady();if(id!==run)return;
-    note.textContent=!synth?'Este navegador não fala; o briefing segue em texto.':!voice?'Voz em português não encontrada; o briefing segue em texto.':/luciana/i.test(voice.name)?'':`Voz Luciana não encontrada; usando ${voice.name}.`;
+    note.textContent=f1?'':!synth?'Este navegador não fala; o briefing segue em texto.':!voice?'Voz em português não encontrada; o briefing segue em texto.':/luciana/i.test(voice.name)?'':`Voz Luciana não encontrada; usando ${voice.name}.`;
     const nodes=data.items.map((item,i)=>card(item,i));cards.append(...nodes);
-    await say(data.opening,id);
+    // All sentences are asked for at once, so the next one is ready while the current one plays.
+    const lines=[data.opening,...data.items.map(i=>i.text),...(data.closing?[data.closing]:[])];
+    const pending=f1?lines.map(text=>{const p=fetchVoice(text);p.catch(()=>{});return p;}):[];
+    await say(data.opening,id,pending[0]);
     for(const [i,item] of data.items.entries()){
       if(id!==run)return;
       nodes[i].classList.add('shown');
-      await say(item.text,id);
+      await say(item.text,id,pending[i+1]);
     }
-    if(data.closing)await say(data.closing,id);
+    if(data.closing)await say(data.closing,id,pending[lines.length-1]);
     if(id===run){playing=false;markHeard();for(const n of nodes)n.classList.add('shown');}
   }
 
@@ -103,7 +147,7 @@ export function initNayra({api,openJob,openPanel}) {
   function close(){
     if(stage.hidden)return;
     if(data)markHeard();
-    run++;playing=false;synth?.cancel();cancelAnimationFrame(raf);orb.classList.remove('speaking');
+    run++;playing=false;synth?.cancel();stopVoice();cancelAnimationFrame(raf);orb.classList.remove('speaking');
     stage.hidden=true;document.body.classList.remove('nayra-open');lastFocus?.focus?.({preventScroll:true});refreshCount();
   }
 

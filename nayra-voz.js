@@ -104,14 +104,17 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
     closeBriefing();
     starting=true;stopListening();farewell=false;lastZone='';agentSpoke=false;
     live().hidden=false;document.body.classList.add('nayra-live-on');caption('nayra','Conectando…');note('');$('#nayra-live-card').replaceChildren();
+    let session=null;
     try{
-      const [{agent_id},context]=await Promise.all([api('nayra/agent'),api('nayra/demo-context')]);ctx=context;
+      // C79: the office server hands a one-time token made with the ElevenLabs key it keeps; the key never comes here.
+      // C84: with Tiago, the whole office and the Tiago agent; with a client (presentation), only that client.
+      const [s,context]=await Promise.all([voiceSession('webrtc'),api(presenting?'nayra/demo-context':'nayra/office-context')]);session=s;ctx=context;
       const {Conversation}=await import('@elevenlabs/client');
       convo=await Conversation.startSession({
         // WebRTC is the SDK default for voice: the browser itself plays her audio, which is what works in Safari.
-        agentId:agent_id,connectionType:'webrtc',
+        ...(session.token?{conversationToken:session.token}:{agentId:session.agent_id}),connectionType:'webrtc',
         dynamicVariables:{estado_escritorio:context.text,cliente:context.client},
-        onConnect(p){report('conectou',p?.conversationId||'');
+        onConnect(p){report('conectou',(p?.conversationId||'')+(session.protected?' · protegida':' · sem chave de voz')+' · '+(session.profile||''));
           // If the browser kept the sound suspended, say so on screen: one click anywhere releases it.
           setTimeout(()=>{const states=[...contexts].map(c=>c.state);report('áudio',states.join(',')||'sem contexto');
             if(states.includes('suspended')){audioHeld=true;note('O navegador segurou o som. Clique em qualquer lugar da tela para ouvir a NAYRA.');}},1500);caption('nayra','');armSilence();cancelAnimationFrame(raf);raf=requestAnimationFrame(pulse);indicator();},
@@ -132,20 +135,22 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
         onMessage(m){
           const role=m.role||(m.source==='ai'?'agent':'user');
           if(role==='user'){caption('cliente',m.message);armSilence();const t=norm(m.message);if(NAME.test(t)&&/\b(obrigad[oa]|tchau|ate mais|encerra|pode encerrar)\b/.test(t))farewell=true;}
-          else{caption('nayra',m.message);react(m.message);if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
+          // Expressive voice tags such as [warm] guide the voice; they are not shown on screen.
+          else{const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();caption('nayra',said);react(said);if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
         }
       });
-      // C62: outside presentation it is Tiago talking, not a client; the agent is told so at the start.
-      if(!presenting){try{convo.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Trate-o pelo nome e vá direto ao ponto.');}catch{}}
+      // C62: outside presentation it is Tiago talking, not a client; the agent is told so at the start. C83: she calls him Chefe.
+      if(!presenting){try{convo.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Quando falar com ele, chame-o de Chefe, nunca de Tiago, e vá direto ao ponto.');}catch{}}
       // The question asked together with her name goes in as Tiago's first message.
       if(question){try{caption('cliente',question);convo.sendUserMessage(question);}catch{}}
       clearTimeout(maxTimer);maxTimer=setTimeout(()=>endConversation('10 minutos'),MAX_MS);
     }catch(e){
       report('falhou ao abrir',String(e?.name||'')+': '+String(e?.message||e));
-      caption('nayra','');note(e.code==='not_found'?'O agente de voz da NAYRA ainda não foi criado.':'Não consegui abrir a conversa: '+(e.message||e));
+      caption('nayra','');note(e.code==='not_found'?'O agente de voz da NAYRA ainda não foi criado.':'Não consegui abrir a conversa: '+(e.message||e)+(session&&!session.protected?' Se a autenticação está ligada no ElevenLabs, salve a chave de voz em Operação › Conectar.':''));
       convo=null;setTimeout(()=>{if(!convo)finish();},9000);
     }finally{starting=false;indicator();}
   }
+  function voiceSession(connection){return api('nayra/voice-session',{method:'POST',body:{connection}});}
   // Diagnostics go to the office server log, so a failed demo can be read afterwards. No audio, no transcript.
   function report(event,detail){api('nayra/client-log',{method:'POST',body:{event,detail:String(detail||'').slice(0,600),agent:navigator.userAgent.slice(0,160)}}).catch(()=>{});}
   async function endConversation(reason){
@@ -185,16 +190,16 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
   if(!Recognition)report('ouvinte','indisponível neste navegador');
   syncPresentation();indicator();startListening();
   // Test hook: what the office does when NAYRA says this sentence (camera and job card), without opening a conversation.
-  async function follow(text){if(!ctx)ctx=await api('nayra/demo-context');lastZone='';react(text);return {zone:lastZone,job:$('#nayra-live-card').dataset.job||''};}
+  async function follow(text){if(!ctx)ctx=await api(presenting?'nayra/demo-context':'nayra/office-context');lastZone='';react(text);return {zone:lastZone,job:$('#nayra-live-card').dataset.job||''};}
   // Test hook: a real conversation with the agent in text only (no microphone), with the real AERA context.
   // Used to verify behaviour before a live demo; it spends a little of the ElevenLabs credits like any conversation.
   async function textTest(questions,wait=25000){
-    const [{agent_id},context]=await Promise.all([api('nayra/agent'),api('nayra/demo-context')]);ctx=context;lastZone='';
+    const [session,context]=await Promise.all([voiceSession('websocket'),api(presenting?'nayra/demo-context':'nayra/office-context')]);ctx=context;lastZone='';
     const {Conversation}=await import('@elevenlabs/client');
     const log=[];let turn=null;
     const next=()=>new Promise(res=>{turn=res;setTimeout(()=>res('timeout'),wait);});
     const first=next();
-    const c=await Conversation.startSession({agentId:agent_id,textOnly:true,connectionType:'websocket',
+    const c=await Conversation.startSession({...(session.signed_url?{signedUrl:session.signed_url}:{agentId:session.agent_id}),textOnly:true,connectionType:'websocket',
       dynamicVariables:{estado_escritorio:context.text,cliente:context.client},
       onMessage(m){const role=m.role||(m.source==='ai'?'agent':'user');log.push({role,text:m.message});if(role!=='user'){react(m.message);log.push({zone:lastZone,card:$('#nayra-live-card').dataset.job||''});turn?.('ok');}},
       onConnect(p){log.push({connected:p?.conversationId||true});},

@@ -159,7 +159,8 @@ def briefing(store, since='', image_ready=False, local_hour=None, client_id=None
         item['role'] = ROLE.get(item['agent'], '')
 
     hour = datetime.datetime.now().hour if local_hour is None else local_hour
-    hello = f'{_greeting(hour)}, Tiago.'
+    # C83: NAYRA calls Tiago "Chefe" when she talks to him (his request); about him, to others, he stays Tiago.
+    hello = f'{_greeting(hour)}, Chefe.'
     if not items:
         opening, closing = f'{hello} Tudo em dia. Nada espera por você.', ''
     elif len(you) and len(items) == 1:
@@ -358,6 +359,38 @@ def demo_context(store, client_id, max_chars=14000, max_jobs=6, delivery_chars=3
     if len(text) > max_chars:
         text = text[:max_chars].rstrip() + '\n[… contexto cortado no limite]'
     return {'client': client['name'], 'client_id': client_id, 'facts': len(facts), 'jobs': out_jobs, 'text': text}
+
+
+def office_context(store, max_chars=24000, max_jobs=12, delivery_chars=1500):
+    """C84: what NAYRA knows when it is Tiago talking (never in presentation): every client and the latest work."""
+    lines = ['ESCRITÓRIO INTEIRO (conversa com o Tiago, não é demonstração para cliente).', '', 'CLIENTES:']
+    for row in store.list_clients():
+        client = store.get_client(row['id'])
+        facts = [n for n in client['notes'] if n['level'] == 1 and n['state'] == 'confirmado']
+        lines += [f'- {client["name"]}: {client["summary"] or "sem resumo"}' + (f' ({len(facts)} fatos confirmados)' if facts else '')]
+        lines += [f'  · ({n["kind"]}) {n["text"]}' for n in facts[:8]]
+    lines += ['', 'EQUIPE DO ESCRITÓRIO (agentes de IA, não pessoas):']
+    lines += [f'- {name}: {ROLE[name]}, sala {room}' for name, room in
+              (('ARI', 'Comando, andar 02'), ('MAYA', 'Think, estratégia'), ('NOA', 'Create, texto e conceito'), ('JOHN', 'Create, design e arte'), ('LEO', 'Build, tecnologia'), ('NINA', 'Grow, negócios'))]
+    jobs = store.list()[:max_jobs]
+    lines += ['', f'TRABALHOS REGISTRADOS ({len(jobs)} mais recentes, de todos os clientes):']
+    out_jobs = []
+    for j in jobs:
+        full = store.get(j['id'])
+        client = store.get_client(full['client_id'])['name'] if full.get('client_id') else 'sem cliente'
+        lines += ['', f'## {full["title"]}', f'Cliente: {client} · Estado: {STATUS_PT.get(full["status"], full["status"])} · aberto em {full["created"][:10]}']
+        steps = [f'- {e["data"].get("agent", "")}: {e["data"].get("message", "")}' for e in full['events'] if e['data'].get('message') and e['data'].get('agent')]
+        if steps:
+            lines += ['Etapas registradas:'] + steps[:8]
+        if full['deliveries']:
+            d = full['deliveries'][-1]
+            text = d['text'] if len(d['text']) <= delivery_chars else d['text'][:delivery_chars].rstrip() + '\n[… entrega continua no escritório]'
+            lines += [f'Entrega (versão {d["revision"]}):', text]
+        out_jobs.append({'id': full['id'], 'title': full['title'], 'status': full['status']})
+    text = '\n'.join(lines)
+    if len(text) > max_chars:
+        text = text[:max_chars].rstrip() + '\n[… contexto cortado no limite]'
+    return {'client': 'escritório inteiro', 'client_id': '', 'facts': 0, 'jobs': out_jobs, 'text': text}
 
 
 # ---------------------------------------------------------------- image batches (C66 to C71)
