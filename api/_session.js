@@ -49,5 +49,8 @@ export function loggedIn(req,now=Date.now()){
 
 export function loginReady(){
   const {OFFICE_LOGIN_USER:user,OFFICE_LOGIN_PASSWORD:password,SESSION_SECRET:secret}=process.env;
-  return !!(user&&password&&password.length>=10&&secret&&secret.length>=32);
+  const missing=[!user&&'OFFICE_LOGIN_USER vazio',!(password&&password.length>=10)&&'OFFICE_LOGIN_PASSWORD vazio ou com menos de 10 caracteres',!(secret&&secret.length>=32)&&'SESSION_SECRET vazio ou curto'].filter(Boolean);
+  // Names only, never values: the reason lands in the Vercel log, not on the page.
+  if(missing.length&&process.env.VERCEL)console.warn('login desligado:',missing.join('; '));
+  return !missing.length;
 }
