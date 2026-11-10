@@ -224,7 +224,8 @@
       <p class="nayra-caption" id="nayra-caption" aria-live="polite"></p>
       <p class="nayra-note" id="nayra-note"></p>
       <p id="nayra-talk-error" class="nayra-talk-error" role="status"></p>
-      <div class="nayra-controls"><button type="button" id="nayra-talk-open" class="nayra-talk-open" hidden>Falar com a NAYRA</button><button type="button" id="nayra-replay">Ouvir de novo</button><button type="button" id="nayra-close">Fechar <span aria-hidden="true">esc</span></button></div>
+      <form id="nayra-login" class="nayra-login" hidden><label for="nayra-user">Usuário</label><input id="nayra-user" autocomplete="username" spellcheck="false" autocapitalize="off" maxlength="80" required /><label for="nayra-pass">Senha</label><input id="nayra-pass" type="password" autocomplete="current-password" maxlength="200" required /><div><button type="submit" id="nayra-login-enter">Entrar</button><button type="button" id="nayra-login-cancel">Cancelar</button></div></form>
+      <div class="nayra-controls"><button type="button" id="nayra-talk-open" class="nayra-talk-open" hidden>Falar com a NAYRA</button><button type="button" id="nayra-login-open" hidden>Entrar</button><button type="button" id="nayra-replay">Ouvir de novo</button><button type="button" id="nayra-close">Fechar <span aria-hidden="true">esc</span></button></div>
     </div>
     <ol class="nayra-cards" id="nayra-cards" aria-label="Itens do briefing"></ol>
   </section>

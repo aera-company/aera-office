@@ -110,3 +110,13 @@ Quando fala com ele, a NAYRA o chama de "Chefe": o briefing abre com "Boa noite,
 - Os dois usam a voz F1, modo Custom, autenticação ligada e a mesma chave de voz.
 
 Diagnóstico: cada tentativa de conversa grava o estado da conexão e o erro (sem áudio nem texto falado) em `runtime/office-8080.log`, nas linhas `[NAYRA voz]`.
+
+## Site público com login (C89)
+
+Sem login, o site abre o agente de apresentação, que só conhece os fatos públicos da AERA. Com login, o mesmo botão abre o agente completo, cuja base de conhecimento guarda os dossiês dos projetos, sem valores comerciais.
+
+- `api/login.js` confere usuário e senha no servidor e grava um cookie de sessão assinado, `HttpOnly`, `Secure` e `SameSite=Strict`, válido por 12 horas. Seis tentativas erradas por visitante bloqueiam por 15 minutos.
+- `api/session.js` diz à página só se há sessão. `api/vitrine-session.js` escolhe o agente pela sessão.
+- O conteúdo dos projetos nunca entra neste repositório. Ele fica na base de conhecimento do agente, no ElevenLabs.
+- Variáveis no projeto Vercel: `OFFICE_LOGIN_USER` e `OFFICE_LOGIN_PASSWORD` (cadastradas pelo Tiago), `SESSION_SECRET` (aleatória, com 32 caracteres ou mais) e `NAYRA_AGENT_ID_TIAGO`.
+- Atenção: com login, a NAYRA fala de todos os projetos. Em demonstração, outro cliente pode ouvir sobre trabalhos que não são dele.

@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test tests/navigation.test.js tests/stations.test.js tests/vitrine-session.test.js",
+    "test": "node --test tests/navigation.test.js tests/stations.test.js tests/vitrine-session.test.js tests/login.test.js",
     "start": "python3 scripts/serve_demo.py",
     "test:operation": "PYTHONDONTWRITEBYTECODE=1 python3 tests/test_operation.py"
   },

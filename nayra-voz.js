@@ -147,7 +147,9 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
       // The question asked together with her name goes in as Tiago's first message.
       if(question){try{caption('cliente',question);lights(question);convo.sendUserMessage(question);}catch{}}
       // The public site gets a shorter conversation, to keep the spend of a demo small.
-      clearTimeout(maxTimer);maxTimer=setTimeout(()=>endConversation(VITRINE?'5 minutos':'10 minutos'),VITRINE?5*60*1000:MAX_MS);
+      // C89: logged in on the site, the full conversation gets the office limit.
+      const short=VITRINE&&session.profile!=='completo';
+      clearTimeout(maxTimer);maxTimer=setTimeout(()=>endConversation(short?'5 minutos':'10 minutos'),short?5*60*1000:MAX_MS);
     }catch(e){
       report('falhou ao abrir',String(e?.name||'')+': '+String(e?.message||e));
       caption('nayra','');note(e.code==='not_found'?'O agente de voz da NAYRA ainda não foi criado.':'Não consegui abrir a conversa: '+(e.message||e)+(session&&!session.protected?' Se a autenticação está ligada no ElevenLabs, salve a chave de voz em Operação › Conectar.':''));
@@ -214,7 +216,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
     catch{throw new Error('Não consegui abrir a conversa agora.');}
     let data={};try{data=await r.json();}catch{}
     if(!r.ok)throw new Error(data.error||'Não consegui abrir a conversa agora.');
-    await converse('',{token:data.token,protected:true,profile:'apresentacao',context:data.context});
+    await converse('',{token:data.token,protected:true,profile:data.profile||'apresentacao',context:data.context});
   }
   // Test hook: what the office does when NAYRA says this sentence (camera and job card), without opening a conversation.
   async function follow(text){if(!ctx)ctx=await api(presenting?'nayra/demo-context':'nayra/office-context');lastZone='';react(text);return {zone:lastZone,job:$('#nayra-live-card').dataset.job||''};}

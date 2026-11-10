@@ -377,3 +377,13 @@ body.vitrine .nayra-note{font-size:14px;line-height:1.5;color:var(--muted);max-w
 .nayra-controls .nayra-talk-open:disabled{opacity:.5}
 .nayra-talk-error{margin:16px 0 0;font-size:12px;color:#e7b4a8;text-align:center}
 .nayra-talk-error:empty{display:none}
+/* C89 login do site: libera a NAYRA completa. */
+.nayra-login{width:100%;max-width:320px;margin-top:20px;text-align:left}
+.nayra-login[hidden]{display:none}
+.nayra-login label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+.nayra-login input{width:100%;min-height:40px;padding:0 12px;background:rgba(10,10,10,.6);border:1px solid var(--line);color:var(--ink);font-size:16px;border-radius:0}
+.nayra-login input:focus-visible{outline:1px solid var(--ink);outline-offset:2px}
+.nayra-login div{display:flex;gap:8px;margin-top:14px}
+.nayra-login button{min-height:40px;padding:0 16px;border:1px solid var(--line);background:none;color:var(--muted);font-size:12px;border-radius:0}
+.nayra-login button[type=submit]{border-color:var(--ink);background:var(--ink);color:#0a0a0a}
+.nayra-login button:disabled{opacity:.5}

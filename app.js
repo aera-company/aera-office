@@ -271,6 +271,28 @@ if(VITRINE){
   // C88: on the public site one click opens the conversation; the limits live in the Vercel function and in the ElevenLabs agent.
   const talk=$('#nayra-talk-open'),error=$('#nayra-talk-error');
   talk.hidden=false;
+  // C89: with login, the same button opens the full NAYRA, who knows the project dossiers. The check happens on the server.
+  const login=$('#nayra-login'),loginOpen=$('#nayra-login-open'),user=$('#nayra-user'),pass=$('#nayra-pass');
+  let logged=false;
+  const showMode=()=>{$('#nayra-title').textContent=logged?'NAYRA · AERA AI Office · modo completo':'NAYRA · AERA AI Office';loginOpen.textContent=logged?'Sair':'Entrar';};
+  const post=(body)=>fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
+  fetch('/api/session',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(s=>{if(!s)return;logged=!!s.logged;loginOpen.hidden=!s.available&&!logged;showMode();}).catch(()=>{});
+  loginOpen.onclick=async()=>{
+    error.textContent='';
+    if(logged){try{await post({logout:true});}catch{}logged=false;login.hidden=true;showMode();return;}
+    login.hidden=!login.hidden;if(!login.hidden)user.focus();
+  };
+  $('#nayra-login-cancel').onclick=()=>{login.hidden=true;pass.value='';error.textContent='';};
+  login.onsubmit=async e=>{
+    e.preventDefault();const enter=$('#nayra-login-enter');enter.disabled=true;error.textContent='';
+    try{
+      let r;try{r=await post({user:user.value,password:pass.value});}catch{throw new Error('Não consegui entrar agora.');}
+      let data={};try{data=await r.json();}catch{}
+      if(!r.ok)throw new Error(data.error||'Não consegui entrar agora.');
+      logged=true;login.hidden=true;showMode();
+    }catch(failure){error.textContent=failure.message;pass.focus();}
+    finally{pass.value='';enter.disabled=false;}
+  };
   talk.onclick=async()=>{
     talk.disabled=true;error.textContent='';
     try{await voz.publicTalk();}
