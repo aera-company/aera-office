@@ -143,10 +143,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
           else{const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();caption('nayra',said);react(said);if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
         }
       });
-      // C62: outside presentation it is Tiago talking, not a client; the agent is told so at the start. C83: she calls him Chefe.
-      if(!presenting&&!VITRINE){try{convo.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Quando falar com ele, chame-o de Chefe, nunca de Tiago, e vá direto ao ponto.');}catch{}}
-      // The 3D office obeys one spoken command; she is told so, to confirm instead of saying she cannot do it.
-      try{convo.sendContextualUpdate('O escritório 3D na tela obedece a um comando de voz: quando a pessoa pedir para apagar ou acender as luzes do escritório, o próprio office faz isso ao ouvir o pedido. Confirme em uma frase curta e não diga que não consegue.');}catch{}
+      brief(convo);
       // The question asked together with her name goes in as Tiago's first message.
       if(question){try{caption('cliente',question);lights(question);convo.sendUserMessage(question);}catch{}}
       // The public site gets a shorter conversation, to keep the spend of a demo small.
@@ -174,11 +171,19 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
 
   // "Mostra e conduz" (C53): the office follows what she says. Only reading and navigation, never a change.
   const ZONES=[['maya','think'],['estrategia','think'],['noa','create'],['john','create'],['jon','create'],['criacao','create'],['leo','build'],['tecnologia','build'],['nina','grow'],['negocios','grow'],['ari','control'],['comando','control']];
+  // What the agent is told when a conversation opens; the live conversation and the text test share it.
+  function brief(conversation){
+    // C62: outside presentation it is Tiago talking, not a client; the agent is told so at the start. C83: she calls him Chefe.
+    if(!presenting&&!VITRINE){try{conversation.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Quando falar com ele, chame-o de Chefe, nunca de Tiago, e vá direto ao ponto.');}catch{}}
+    // The 3D office obeys one spoken command; she is told so, to confirm instead of saying she cannot do it.
+    try{conversation.sendContextualUpdate('O escritório 3D na tela obedece a um comando de voz: quando a pessoa pedir para apagar ou acender as luzes do escritório, o próprio office faz isso ao ouvir o pedido. Confirme em uma frase curta e não diga que não consegue.');}catch{}
+  }
+  let lightsOff=false;
   // "Apaga as luzes": the request itself is the event. The scene answers whether it obeyed, and only then is NAYRA told.
-  function lights(text){
-    const command=lightsCommand(text);if(!command)return;
+  function lights(text,conversation=convo){
+    const command=lightsCommand(text,{lightsOff});if(!command)return;
     const event=new CustomEvent('aera:lights',{detail:{on:command==='on',handled:false}});window.dispatchEvent(event);
-    if(event.detail.handled){try{convo?.sendContextualUpdate(command==='on'?'As luzes do escritório acabam de ser acesas na tela.':'As luzes do escritório acabam de ser apagadas na tela.');}catch{}}
+    if(event.detail.handled){lightsOff=command==='off';try{conversation?.sendContextualUpdate(command==='on'?'As luzes do escritório acabam de ser acesas na tela.':'As luzes do escritório acabam de ser apagadas na tela.');}catch{}}
   }
   function react(text){
     const t=' '+norm(text)+' ';
@@ -215,20 +220,22 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
   async function follow(text){if(!ctx)ctx=await api(presenting?'nayra/demo-context':'nayra/office-context');lastZone='';react(text);return {zone:lastZone,job:$('#nayra-live-card').dataset.job||''};}
   // Test hook: a real conversation with the agent in text only (no microphone), with the real AERA context.
   // Used to verify behaviour before a live demo; it spends a little of the ElevenLabs credits like any conversation.
-  async function textTest(questions,wait=25000){
+  // Some agents do not allow the text-only override; `textOnly:false` opens the normal voice session with the microphone muted.
+  async function textTest(questions,wait=25000,{textOnly=true}={}){
     const [session,context]=await Promise.all([voiceSession('websocket'),api(presenting?'nayra/demo-context':'nayra/office-context')]);ctx=context;lastZone='';
     const {Conversation}=await import('@elevenlabs/client');
     const log=[];let turn=null;
     const next=()=>new Promise(res=>{turn=res;setTimeout(()=>res('timeout'),wait);});
     const first=next();
-    const c=await Conversation.startSession({...(session.signed_url?{signedUrl:session.signed_url}:{agentId:session.agent_id}),textOnly:true,connectionType:'websocket',
+    const c=await Conversation.startSession({...(session.signed_url?{signedUrl:session.signed_url}:{agentId:session.agent_id}),textOnly,connectionType:'websocket',
       dynamicVariables:{estado_escritorio:context.text,cliente:context.client},
       onMessage(m){const role=m.role||(m.source==='ai'?'agent':'user');log.push({role,text:m.message});if(role!=='user'){react(m.message);log.push({zone:lastZone,card:$('#nayra-live-card').dataset.job||''});turn?.('ok');}},
       onConnect(p){log.push({connected:p?.conversationId||true});},
       onDisconnect(d){log.push({disconnected:JSON.parse(JSON.stringify(d||{}))});turn?.('closed');},
       onError(message,context){log.push({error:message,context:context?String(context?.message||JSON.stringify(context)).slice(0,300):''});turn?.('error');}});
-    await first;
-    for(const q of questions){const r=next();c.sendUserMessage(q);if(await r!=='ok')break;}
+    if(!textOnly){try{c.setMicMuted(true);}catch{}}
+    await first;brief(c);
+    for(const q of questions){const r=next();lights(q,c);c.sendUserMessage(q);if(await r!=='ok')break;}
     try{await c.endSession();}catch{}
     return log;
   }

@@ -52,5 +52,8 @@ test('Pontos de circulação respeitam a distância máxima do passeio',()=>{
 test('Comando de voz das luzes: apagar, acender e nada quando não é pedido',()=>{
   for(const t of ['NAYRA, apaga as luzes do office','Pode apagar a luz, por favor?','Desliga as luzes do escritório','apague a iluminação'])assert.equal(lightsCommand(t),'off',t);
   for(const t of ['Acende as luzes','NAYRA, liga a luz do office de novo','acenda as luzes do escritório'])assert.equal(lightsCommand(t),'on',t);
+  for(const t of ['Agora pode acender de novo.','Acende, por favor','liga de volta'])assert.equal(lightsCommand(t,{lightsOff:true}),'on',t);
+  for(const t of ['Agora pode acender de novo.','Não acende ainda'])assert.equal(lightsCommand(t),null,t);
+  assert.equal(lightsCommand('Não acende ainda',{lightsOff:true}),null);
   for(const t of ['Não apaga as luzes','Como está o job da AERA?','A luz do fim de tarde ficou linda','apaga esse post','',null])assert.equal(lightsCommand(t),null,String(t));
 });
