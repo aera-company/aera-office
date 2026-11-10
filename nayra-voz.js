@@ -1,4 +1,5 @@
 import {VITRINE} from './vitrine.js';
+import {lightsCommand} from './commands.js';
 // NAYRA by voice (C49 to C60): presentation mode, the "Oi, NAYRA" listener and the live conversation with the ElevenLabs agent.
 // The listener is the browser's speech recognition (audio goes to Google in Chrome, Apple in Safari) and only waits for phrases.
 // The conversation itself runs on the ElevenLabs agent; credits are spent only while it is open.
@@ -137,15 +138,17 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
         },
         onMessage(m){
           const role=m.role||(m.source==='ai'?'agent':'user');
-          if(role==='user'){caption('cliente',m.message);armSilence();const t=norm(m.message);if(NAME.test(t)&&/\b(obrigad[oa]|tchau|ate mais|encerra|pode encerrar)\b/.test(t))farewell=true;}
+          if(role==='user'){caption('cliente',m.message);armSilence();lights(m.message);const t=norm(m.message);if(NAME.test(t)&&/\b(obrigad[oa]|tchau|ate mais|encerra|pode encerrar)\b/.test(t))farewell=true;}
           // Expressive voice tags such as [warm] guide the voice; they are not shown on screen.
           else{const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();caption('nayra',said);react(said);if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
         }
       });
       // C62: outside presentation it is Tiago talking, not a client; the agent is told so at the start. C83: she calls him Chefe.
       if(!presenting&&!VITRINE){try{convo.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Quando falar com ele, chame-o de Chefe, nunca de Tiago, e vá direto ao ponto.');}catch{}}
+      // The 3D office obeys one spoken command; she is told so, to confirm instead of saying she cannot do it.
+      try{convo.sendContextualUpdate('O escritório 3D na tela obedece a um comando de voz: quando a pessoa pedir para apagar ou acender as luzes do escritório, o próprio office faz isso ao ouvir o pedido. Confirme em uma frase curta e não diga que não consegue.');}catch{}
       // The question asked together with her name goes in as Tiago's first message.
-      if(question){try{caption('cliente',question);convo.sendUserMessage(question);}catch{}}
+      if(question){try{caption('cliente',question);lights(question);convo.sendUserMessage(question);}catch{}}
       // The public site gets a shorter conversation, to keep the spend of a demo small.
       clearTimeout(maxTimer);maxTimer=setTimeout(()=>endConversation(VITRINE?'5 minutos':'10 minutos'),VITRINE?5*60*1000:MAX_MS);
     }catch(e){
@@ -171,6 +174,12 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
 
   // "Mostra e conduz" (C53): the office follows what she says. Only reading and navigation, never a change.
   const ZONES=[['maya','think'],['estrategia','think'],['noa','create'],['john','create'],['jon','create'],['criacao','create'],['leo','build'],['tecnologia','build'],['nina','grow'],['negocios','grow'],['ari','control'],['comando','control']];
+  // "Apaga as luzes": the request itself is the event. The scene answers whether it obeyed, and only then is NAYRA told.
+  function lights(text){
+    const command=lightsCommand(text);if(!command)return;
+    const event=new CustomEvent('aera:lights',{detail:{on:command==='on',handled:false}});window.dispatchEvent(event);
+    if(event.detail.handled){try{convo?.sendContextualUpdate(command==='on'?'As luzes do escritório acabam de ser acesas na tela.':'As luzes do escritório acabam de ser apagadas na tela.');}catch{}}
+  }
   function react(text){
     const t=' '+norm(text)+' ';
     let best=null;for(const [word,zone] of ZONES){const i=t.indexOf(' '+word+' ');if(i>=0&&(!best||i<best.i))best={i,zone};}

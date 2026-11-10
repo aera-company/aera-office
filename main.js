@@ -6,20 +6,17 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import {createSky,buildLeblon,HAZE,toWorld} from './leblon.js';
 
 // Real procedural architecture. No AI services, panorama geometry or remote assets.
 export async function createOffice({selectZone,onFailure,onQuality,onNavigation=()=>{},onInteraction=()=>{},onStation=()=>{}}) {
   const stage = document.querySelector('#scene');
   const renderer = new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:false});
   const scene = new THREE.Scene();
-  // Dusk: deep blue overhead, a warm band at the horizon, like the reference. Fog takes the horizon colour.
-  const sky = new THREE.Color('#1c2a33');
-  scene.background = sky;
-  scene.fog = new THREE.Fog('#2a343a',46,125);
-  const skyCanvas=document.createElement('canvas');skyCanvas.width=32;skyCanvas.height=512;
-  const skyContext=skyCanvas.getContext('2d'),skyGradient=skyContext.createLinearGradient(0,0,0,512);
-  skyGradient.addColorStop(0,'#0c151d');skyGradient.addColorStop(.42,'#223642');skyGradient.addColorStop(.62,'#5a5a56');skyGradient.addColorStop(.72,'#b2704a');skyGradient.addColorStop(.8,'#5a4238');skyGradient.addColorStop(1,'#1b262c');
-  skyContext.fillStyle=skyGradient;skyContext.fillRect(0,0,32,512);scene.background=new THREE.CanvasTexture(skyCanvas);scene.background.colorSpace=THREE.SRGBColorSpace;
+  // Blue hour on the shoreline: a sky dome with the last warm band to the west; the fog takes the horizon haze.
+  scene.background = new THREE.Color(HAZE);
+  scene.fog = new THREE.Fog(HAZE,55,400);
+  const sky = createSky();scene.add(sky.mesh);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.08;
@@ -32,9 +29,12 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   renderer.setSize(width,height);
   renderer.domElement.setAttribute('aria-hidden','true');
   stage.append(renderer.domElement);
+  // On a phone the intro text sits over the brightest part of the sky; a soft scrim keeps it readable.
+  const scrim=document.createElement('div');scrim.setAttribute('aria-hidden','true');
+  scrim.style.cssText='position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .6s ease;background:linear-gradient(180deg,rgba(8,12,16,.78) 0%,rgba(8,12,16,.6) 46%,rgba(8,12,16,0) 74%)';stage.append(scrim);
   renderer.domElement.addEventListener('webglcontextlost', e => {e.preventDefault();failed=true;onFailure('A renderização 3D foi interrompida. Recarregue a página ou abra a apresentação offline.');});
-  const camera = new THREE.PerspectiveCamera(36,width/height,.1,180);
-  camera.position.set(30,19,36);
+  const camera = new THREE.PerspectiveCamera(36,width/height,.2,1600);
+  camera.position.set(40,12.5,36);
   const controls = new OrbitControls(camera,renderer.domElement);
   controls.target.set(0,6,0);
   controls.enableDamping = true;
@@ -44,6 +44,8 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   controls.zoomSpeed = .7;
   controls.minDistance = 12;
   controls.maxDistance = 100;
+  // The orbit stays on the plaza and seafront side, where the camera has room and the facade reads.
+  controls.minAzimuthAngle = -1.75;controls.maxAzimuthAngle = 1.75;
   controls.minPolarAngle = Math.PI/6;
   controls.maxPolarAngle = Math.PI/2.03;
   controls.update();
@@ -60,15 +62,18 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   Object.assign(moon.shadow.camera,{left:-23,right:23,top:21,bottom:-18,near:1,far:70});
   moon.shadow.bias=-.00035;moon.shadow.normalBias=.035;
   scene.add(moon);
-  const sunset = new THREE.DirectionalLight('#ffb272',1.9);
-  sunset.position.set(16,6,-11);scene.add(sunset);
+  const sunset = new THREE.DirectionalLight('#ffc09a',1.35);
+  sunset.position.set(-30,7,-22);scene.add(sunset);
   const rim = new THREE.DirectionalLight('#f3c9a0',.55);
-  rim.position.set(-18,8,-14);scene.add(rim);
+  rim.position.set(22,8,-10);scene.add(rim);
+  const interiorLights=[];
   for (const x of [-5.5,5.5]) {
     const light = new THREE.PointLight('#ffc283',185,17,2);light.position.set(x,7.9,0);scene.add(light);
     const lower = new THREE.PointLight('#ffb96d',165,15,2);lower.position.set(x,3.8,0);scene.add(lower);
     const command = new THREE.PointLight('#ffc99a',175,17,2);command.position.set(x*.7,12.2,-.6);scene.add(command);
+    interiorLights.push(light,lower,command);
   }
+  for(const light of interiorLights)light.userData.full=light.intensity;
   const materials = {};
   function material(name,color,roughness=.7,metalness=0,extra={}) {return materials[name]=new THREE.MeshStandardMaterial({color,roughness,metalness,...extra});}
   const steel = material('steel','#273237',.32,.75);
@@ -117,7 +122,8 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   function group(x,y,z,rotation=0) {const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=rotation;architecture.add(g);return g;}
   function bar(x,y,z,length,axis='x',m=warm) {return box(x,y,z,axis==='x'?length:.025,.022,axis==='z'?length:.025,m);}
   // Ground and a planted island: quiet context, without expensive planar reflections.
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(230,230),material('ground','#293a3d',.42,.24));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1300,1300),material('ground','#57544d',.9));
+  ground.material.map=(()=>{const t=grainTexture('#e9e2d4');t.repeat.set(260,260);return t;})();
   ground.rotation.x=-Math.PI/2;ground.position.y=-.35;ground.receiveShadow=true;scene.add(ground);
   box(0,-.12,0,25,.4,17,concrete);
   box(0,.14,0,23.9,.2,16.2,steel);
@@ -126,21 +132,52 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   for(const z of [7.88,-7.88])bar(0,.19,z,23.65);
   for(const x of [-11.9,11.9])bar(x,.19,0,15.7,'z');
   // Entrance stepping stones and fine paving joints.
-  for(let i=0;i<4;i++){box(2.4,.02,9+i*1.15,3.4,.15,.88,concrete);bar(2.4,-.03,9.47+i*1.15,3.25,'x',warmDim);}
+  for(let i=0;i<5;i++){box(2.4,.02,9+i*1.15,3.4,.15,.88,concrete);bar(2.4,-.03,9.47+i*1.15,3.25,'x',warmDim);}
   // A reflecting pool wraps the south and east of the plinth; the facade and the warm interior read in it.
-  const pool = material('pool','#122a33',.05,.92,{envMapIntensity:1.6});
-  box(0,-.31,13.2,38,.045,9.2,pool);
-  box(17.2,-.31,-.5,6.4,.045,36.6,pool);
-  for(const [x,z,w,d] of [[-19.1,13.2,.14,9.3],[0,17.9,38.2,.14],[20.5,-.5,.14,36.8],[17.2,-18.9,6.6,.14]])box(x,-.2,z,w,.22,d,concrete);
+  const pool = material('pool','#1b3440',.07,.7,{envMapIntensity:1.8});
+  box(0,-.31,11.6,38,.045,6,pool);
+  box(17.2,-.31,2.8,6.4,.045,23.6,pool);
+  for(const [x,z,w,d] of [[-19.1,11.6,.14,6.1],[0,14.65,38.2,.14],[20.5,2.8,.14,23.8],[17.2,-9.05,6.6,.14]])box(x,-.2,z,w,.22,d,concrete);
   // Lantern globes get their own material: spheres are non-indexed and cannot merge with the box bars.
   const lantern=new THREE.MeshBasicMaterial({color:'#ffd9a8',toneMapped:false});
   for(const x of [-13,-7.5,7.5,13]){box(x,.72,8.3,.11,.95,.11,steel);sphere(x,1.3,8.3,.1,lantern);}
   for(const z of [-9,-3,3,9]){box(13.3,.72,z,.11,.95,.11,steel);sphere(13.3,1.3,z,.1,lantern);}
   // Three true storeys, restrained horizontal proportions; the roof terrace sits on the fourth slab.
-  for(const y of [.58,4.85,9.10,13.38]) {
-    box(0,y,0,21.2,.28,12.8,steel);
+  // Leblon pavilion: three thin plates that slide past each other. A deep balcony to the sea, a terrace cantilevered
+  // to the east, a third plate reaching west, and a long roof eave. The glass line stays where the rooms are.
+  const fascia=material('fascia','#cdc6b7',.6,.02);fascia.map=limestone.map;
+  const plates=[[.58,-11.6,11.6,-6.9,7.6],[4.85,-10.7,14.6,-6.5,9.0],[9.10,-14.2,10.7,-6.5,7.3],[13.38,-12.6,13.4,-7.7,9.4]];
+  for(const [y,x0,x1,z0,z1] of plates){
+    const cx=(x0+x1)/2,cz=(z0+z1)/2,w=x1-x0,d=z1-z0;
+    box(cx,y+.02,cz,w,.2,d,fascia);
+    box(cx,y-.12,cz,w-.7,.08,d-.7,steel);
+    box(cx,y+.125,cz,w-.5,.02,d-.5,slab);
     box(0,y+.18,0,20.6,.08,12.15,slab);
+    if(y>1){box(cx,y-.175,cz,w-.9,.03,d-.9,oakDark);bar(cx,y-.2,z1-.5,w-1.6);}
   }
+  // Glass balustrades on the outdoor plates.
+  function rail(x0,z0,x1,z1,y){
+    const along=Math.abs(x1-x0)>Math.abs(z1-z0),length=along?Math.abs(x1-x0):Math.abs(z1-z0),cx=(x0+x1)/2,cz=(z0+z1)/2;
+    box(cx,y+.52,cz,along?length:.02,1.0,along?.02:length,innerGlass);box(cx,y+1.04,cz,along?length:.05,.035,along?.05:length,steel);
+    const posts=Math.max(1,Math.round(length/2.6));for(let i=0;i<=posts;i++)box(x0+(x1-x0)*i/posts,y+.52,z0+(z1-z0)*i/posts,.035,1.0,.035,steel);
+  }
+  rail(-10.55,8.85,14.45,8.85,4.97);rail(14.45,-6.35,14.45,8.85,4.97);rail(-10.55,6.1,-10.55,8.85,4.97);rail(10.3,-6.35,14.45,-6.35,4.97);
+  rail(-14.05,7.15,10.55,7.15,9.22);rail(-14.05,-1.4,-14.05,7.15,9.22);rail(10.55,6.1,10.55,7.15,9.22);
+  // Round pilotis carry the east terrace over the water.
+  for(const z of [8.3,1.2,-5.8])cylinder(13.9,2.2,z,.17,5.1,concrete);
+  // Stone circulation core at the back, taller than the roof, with one warm slit; low garden walls extend the horizontals.
+  box(-12.3,8.4,-4.1,3.5,17.5,4.8,limestone);box(-12.3,17.2,-4.1,3.9,.14,5.2,fascia);box(-12.3,8.8,-1.68,.2,14.2,.03,warm);
+  box(18.5,1.1,-7.2,16,2.9,.35,limestone);box(-20,1.1,-7.2,11.5,2.9,.35,limestone);
+  // Timber brise on the east face of the Comando floor.
+  for(let z=-5.7;z<5.95;z+=.55)box(10.52,11.24,z,.3,3.9,.06,oak);
+  // Entrance: a steel portal, a low canopy under the balcony and a broad stone step.
+  box(2.4,3.9,6.12,2.7,.12,.3,steel);for(const x of [1.1,3.7])box(x,2.3,6.12,.12,3.3,.3,steel);
+  box(2.4,3.98,7.45,3.6,.08,2.6,fascia);box(2.4,.3,8.15,6.4,.16,1.1,fascia);
+  // Outdoor rooms: a lounge on the east terrace, planters along the balcony, a pergola over the roof seating.
+  for(const [x,z] of [[12.4,6.9],[12.6,-4.9],[-9.6,7.9],[-3,7.9],[6.2,7.9]])box(x,5.25,z,1.1,.5,.7,concrete);
+  box(-4.4,16.45,-5.2,10.6,.14,.1,steel);box(-4.4,16.45,2.4,10.6,.14,.1,steel);
+  for(const x of [-9.6,.8])for(const z of [-5.2,2.4])box(x,15.05,z,.1,2.8,.1,steel);
+  for(let x=-9.5;x<.85;x+=.42)box(x,16.58,-1.4,.07,.16,8.0,oak);
   // Timber soffits and individual slats are batched into one material draw.
   for(const y of [4.67,8.92,13.20]) {
     box(0,y,0,20.65,.06,12.15,oakDark);
@@ -323,6 +360,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   logo.colorSpace=THREE.SRGBColorSpace;
   const logoMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.65,.407),new THREE.MeshBasicMaterial({map:logo,transparent:true,depthWrite:false}));
   logoMesh.position.set(.5,1.28,3.89);logoMesh.userData.noBatch=true;architecture.add(logoMesh);
+  const leblon=buildLeblon({scene,architecture,box,cylinder,sphere,material,materials,lantern,random,keepClear:[[66,60],[-28,40],[30,40],toWorld(74,46)],anisotropy:Math.min(8,renderer.capabilities.getMaxAnisotropy())});
   // Cheap ambient contact shadow, independent of the single sun shadow map.
   const shadowCanvas=document.createElement('canvas');shadowCanvas.width=128;shadowCanvas.height=128;
   const sc=shadowCanvas.getContext('2d'),gradient=sc.createRadialGradient(64,64,12,64,64,64);
@@ -347,7 +385,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   unitBox.dispose();sphereGeometry.dispose();cylinderGeometry.dispose();
   renderer.shadowMap.needsUpdate=true;
   const views={
-    all:{target:[0,6.4,0],position:[29,16,42]},
+    all:{target:[-1,6.6,0],position:[40,12.5,36]},
     think:{target:[-4.7,6.9,.5],position:[-17,10.3,25]},
     create:{target:[4.7,6.9,.5],position:[20,10.5,25]},
     build:{target:[-5.2,2.6,.5],position:[-17,6.9,25]},
@@ -355,7 +393,17 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     control:{target:[.3,11.2,.5],position:[12,15.5,26]}
   };
   let transition=null,currentZone='all',dirty=true,viewMode='orbit',floorMode='all',exploring=false;
-  let yaw=0,pitch=0,drag=null,lastNavigation=0,lastSampleAt=0;
+  // Office lights: on by default; they only change on a real request (NAYRA's voice command or the scene API).
+  const warmFull=warm.color.clone(),warmDimFull=warmDim.color.clone();let lightLevel=1,lightTarget=1;
+  function applyLights(){
+    for(const light of interiorLights)light.intensity=light.userData.full*(.03+.97*lightLevel);
+    warm.color.copy(warmFull).multiplyScalar(.05+.95*lightLevel);warmDim.color.copy(warmDimFull).multiplyScalar(.12+.88*lightLevel);
+    oak.emissiveIntensity=.06*lightLevel;dirty=true;
+  }
+  function setLights(on){lightTarget=on?1:0;if(motion.matches){lightLevel=lightTarget;applyLights();}dirty=true;return lightTarget===1;}
+  window.addEventListener('aera:lights',e=>{if(failed||!e.detail)return;setLights(!!e.detail.on);e.detail.handled=true;});
+  let yaw=0,pitch=0,drag=null,lastNavigation=0,lastSampleAt=0,opening=false,skipIntro=null;
+  function closeOpening(){opening=false;if(skipIntro){skipIntro.remove();skipIntro=null;}dirty=true;}
   const motion=matchMedia('(prefers-reduced-motion: reduce)');
   const moves=new Set();
   const team=createAgentTeam({scene,contactMaterial:shadow.material,onInvalidate:()=>{dirty=true;}});
@@ -383,7 +431,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     dirty=true;
   }
   function frameOffset(){
-    const mobile=width<=900;
+    const mobile=width<=900;scrim.style.opacity=mobile&&!exploring?'1':'0';
     if(viewMode==='walk')camera.clearViewOffset();
     else if(mobile)camera.setViewOffset(width,height,0,exploring?height*.02:-height*.11,width,height);
     else camera.setViewOffset(width,height,(!exploring||currentZone!=='all')?-width*.075:0,height*.015,width,height);
@@ -397,7 +445,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     controls.target.copy(camera.position).add(direction);camera.lookAt(controls.target);dirty=true;
   }
   function travel(position,target,{instant=false,fov=36,duration=1500}={}){
-    moves.clear();
+    moves.clear();closeOpening();
     if(instant||motion.matches){transition=null;camera.position.copy(position);controls.target.copy(target);camera.fov=fov;camera.updateProjectionMatrix();camera.lookAt(target);syncLook();if(viewMode==='orbit')controls.update();}
     else transition={from:camera.position.clone(),fromTarget:controls.target.clone(),position,target,start:performance.now(),duration,fromFov:camera.fov,fov};
     dirty=true;emitNavigation(true);
@@ -429,7 +477,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     }
     emitNavigation(true);
   }
-  controls.addEventListener('start',()=>{transition=null;dirty=true;onInteraction();});
+  controls.addEventListener('start',()=>{transition=null;closeOpening();dirty=true;onInteraction();});
   controls.addEventListener('change',()=>{dirty=true;});
   const labels=[],layer=document.querySelector('#scene-labels');
   const labelCoords={think:[-6.4,7,5.95],create:[6.3,7,5.95],build:[-6.4,2.8,5.95],grow:[6.3,2.8,5.95],control:[.5,11.3,5.95]};
@@ -485,7 +533,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     for(const {button,position,zone} of labels){
       projected.copy(position).project(camera);const x=(projected.x*.5+.5)*width,y=(-projected.y*.5+.5)*height;
       const mobile=width<=900,leftLimit=exploring?width<=900?16:175:Math.min(400,width*.3);
-      button.hidden=viewMode==='walk'||!!workflow||floorMode==='terrace'||(floorMode!=='all'&&roomSpecs[zone].floor!==floorMode)||camera.position.z<0||projected.z>1||x<leftLimit||x>width-(currentZone==='all'?30:width<=900?20:330)||y<(mobile?230:135)||y>height-(mobile?185:195)||(currentZone!=='all'&&currentZone!==zone);
+      button.hidden=opening||(mobile&&!exploring)||viewMode==='walk'||!!workflow||floorMode==='terrace'||(floorMode!=='all'&&roomSpecs[zone].floor!==floorMode)||camera.position.z<0||projected.z>1||x<leftLimit||x>width-(currentZone==='all'?30:width<=900?20:330)||y<(mobile?230:135)||y>height-(mobile?185:195)||(currentZone!=='all'&&currentZone!==zone);
       button.style.left=`${x}px`;button.style.top=`${y}px`;button.classList.toggle('selected',currentZone===zone);
     }
     for(const {button,position,zone,id} of stationLabels){
@@ -499,7 +547,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   // Room volumes let the architecture itself be selected, not just the labels.
   const roomVolumes=Object.fromEntries(Object.entries(roomSpecs).map(([zone,r])=>{const [a,b,c,d]=r.bounds,y=floorSpecs[r.floor].base;return [zone,new THREE.Box3(new THREE.Vector3(a,y+.25,c),new THREE.Vector3(b,y+3.5,d))];}));
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let pointerStart=null;
-  function cancelTravel(){if(transition){transition=null;syncLook();}onInteraction();}
+  function cancelTravel(){if(transition){transition=null;closeOpening();syncLook();}onInteraction();}
   renderer.domElement.addEventListener('pointerdown',e=>{
     pointerStart={x:e.clientX,y:e.clientY};
     if(viewMode==='walk'){cancelTravel();drag={x:e.clientX,y:e.clientY,id:e.pointerId};renderer.domElement.setPointerCapture(e.pointerId);}
@@ -542,27 +590,40 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     if(transition){
       const t=Math.min(1,(now-transition.start)/transition.duration),e=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
       camera.position.lerpVectors(transition.from,transition.position,e);controls.target.lerpVectors(transition.fromTarget,transition.target,e);camera.fov=THREE.MathUtils.lerp(transition.fromFov,transition.fov,e);camera.updateProjectionMatrix();camera.lookAt(controls.target);moving=true;
-      if(t===1){transition=null;syncLook();}
+      if(t===1){transition=null;closeOpening();syncLook();}
     }
+    if(lightLevel!==lightTarget){const step=Math.min(1,Math.max(0,delta)/1400);lightLevel=lightTarget>lightLevel?Math.min(lightTarget,lightLevel+step):Math.max(lightTarget,lightLevel-step);applyLights();moving=true;}
     if(viewMode==='orbit')controls.update();
-    const agentsChanged=team.update(now,dirty||moving);
+    const agentsChanged=team.update(now,dirty||moving),shoreChanged=leblon.update(now);
     if(workflow&&curve&&!motion.matches){flowDot.position.copy(curve.getPoint((now%2600)/2600));moving=true;}
-    if(dirty||moving||agentsChanged){
+    if(dirty||moving||agentsChanged||shoreChanged){
       const before=performance.now();renderer.render(scene,camera);const submit=performance.now()-before;updateLabels();emitNavigation();dirty=false;
       if(moving){if(delta>0&&delta<250){samples.push(delta);if(samples.length>900)samples.shift();}slowSamples.push(submit);if(slowSamples.length>900)slowSamples.shift();}
       if(!lowQuality&&samples.length>=180&&samples.length%180===0&&samples.slice(-180).reduce((a,b)=>a+b,0)/180>29){setQuality(true);onQuality(true);}
       lastSampleAt=now;
     }
   }
-  function setQuality(low){lowQuality=low;renderer.setPixelRatio(Math.min(devicePixelRatio||1,low?1:1.5));renderer.shadowMap.enabled=!low;renderer.shadowMap.needsUpdate=true;renderer.setSize(width,height);dirty=true;}
+  function setQuality(low){lowQuality=low;leblon.setLow(low);renderer.setPixelRatio(Math.min(devicePixelRatio||1,low?1:1.5));renderer.shadowMap.enabled=!low;renderer.shadowMap.needsUpdate=true;renderer.setSize(width,height);dirty=true;}
   window.addEventListener('resize',()=>{width=innerWidth;height=innerHeight;camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setSize(width,height);frameOffset();dirty=true;});
   document.addEventListener('visibilitychange',()=>{moves.clear();if(!document.hidden){last=performance.now();dirty=true;}});
-  focus('all',true);renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();requestAnimationFrame(frame);
+  focus('all',true);
+  // Opening shot, once per load: a slow travelling from the seafront promenade, across the avenue, rising into the hero frame.
+  // It ends in the interactive scene, can be skipped, and is not played with reduced motion.
+  if(!motion.matches){
+    const hero=camera.position.clone(),heroTarget=controls.target.clone(),[sx,sz]=toWorld(74,46.3);
+    camera.position.set(sx,2.6,sz);controls.target.set(-4,2.3,2);camera.lookAt(controls.target);controls.update();
+    travel(hero,heroTarget,{duration:7600});opening=true;
+    skipIntro=document.createElement('button');skipIntro.id='skip-intro';skipIntro.type='button';skipIntro.textContent='Pular intro';
+    skipIntro.style.cssText='position:fixed;right:36px;top:92px;z-index:60;padding:11px 16px;background:#0f1c23cc;border:1px solid #ffffff3d;color:#eee9df;font:500 12px/1 "Instrument Sans Variable","Helvetica Neue",sans-serif;letter-spacing:.04em;cursor:pointer;backdrop-filter:blur(6px);border-radius:2px';
+    skipIntro.addEventListener('click',()=>{travel(hero,heroTarget,{instant:true});});document.body.append(skipIntro);
+  }
+  renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();requestAnimationFrame(frame);
   const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
   return {
     focus,enter,setFloor,setWorkflow,setStations,setStationStates,setCharacterStates,
     selectStation(id){selectedStation=id||'';dirty=true;},
     setAmbient(value){return team.setAmbient(value);},
+    setLights,lights(){return lightTarget===1;},
     setExploring(value){exploring=value;frameOffset();dirty=true;},
     move(action,active){if(viewMode!=='walk')return;cancelTravel();if(active)moves.add(action);else moves.delete(action);},
     stopMoving(){moves.clear();},

@@ -1,28 +1,31 @@
 import * as THREE from 'three';
-import {pickWaypoint,floorOfY} from './stations.js';
+import {pickWaypoint,floorOfY,routeTiming,routeProgress,WALK_SPEED,STRIDE_LENGTH} from './stations.js';
 
 // Architectural occupants, not autonomous agents. Their choreography is predefined.
 // Two layers of motion: ambient circulation (no task) and execution (driven by server events via setWorkflow).
-// Shared instanced geometry keeps five articulated rigs to three draw calls.
+// Shared instanced geometry keeps six articulated rigs to three draw calls.
 export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
   const media=matchMedia('(prefers-reduced-motion: reduce)');
   const root=new THREE.Group();root.name='AERA_PROPOSED_AGENTS';scene.add(root);
   const parts={capsule:[],sphere:[],shadow:[]},actors=[];
   const material=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.87,metalness:0});
   const specs=[
-    {name:'MAYA',zone:'think',home:[-3.0,5.07,1.55],work:[-3.0,5.07,.4],look:[-5.8,-.7],color:'#59665c',activity:'table'},
-    {name:'NOA',zone:'create',home:[3.0,5.07,2.65],work:[3.0,5.07,1.4],look:[5.6,.7],color:'#99866c',activity:'table'},
+    {name:'MAYA',zone:'think',home:[-3.0,5.07,1.55],work:[-3.0,5.07,.4],look:[-5.8,-.7],color:'#59665c',activity:'table',skin:'#a9805f',hair:'#2a1d17',style:'long',pants:'#2b3338'},
+    {name:'NOA',zone:'create',home:[3.0,5.07,2.65],work:[3.0,5.07,1.4],look:[5.6,.7],color:'#99866c',activity:'table',skin:'#c9a184',hair:'#3a2a1e',style:'short',pants:'#29373e'},
     // JOHN shares the Create room with NOA: his own desk at the back wall, the worktable when a batch or a review involves him.
-    {name:'JOHN',zone:'create',home:[7.6,5.07,-2.3],work:[8.6,5.07,.7],look:[7.6,-4.2],color:'#5c5a66',activity:'keyboard'},
-    {name:'LEO',zone:'build',home:[-6.05,.79,2.8],work:[-6.05,.79,1.6],look:[-7.6,1.1],color:'#405662',activity:'keyboard'},
+    {name:'JOHN',zone:'create',home:[7.6,5.07,-2.3],work:[8.6,5.07,.7],look:[7.6,-4.2],color:'#5c5a66',activity:'keyboard',skin:'#7a563f',hair:'#17120f',style:'full',pants:'#23262b'},
+    {name:'LEO',zone:'build',home:[-6.05,.79,2.8],work:[-6.05,.79,1.6],look:[-7.6,1.1],color:'#405662',activity:'keyboard',skin:'#b88e6c',hair:'#4a3423',style:'short',pants:'#2d3134'},
+    // NINA keeps the Grow lounge: by the low table at rest, between the two desks when a job involves her.
+    {name:'NINA',zone:'grow',home:[3.3,.79,.5],work:[5.7,.79,-2.15],look:[5.7,-.25],color:'#9c5b4b',activity:'conversation',skin:'#946a4d',hair:'#1e1512',style:'bun',pants:'#3a3531'},
     // ARI lives on the Comando floor: in front of the presentation wall at rest, at the head of the long table when a job runs.
-    {name:'ARI',zone:'control',home:[.5,9.35,-4.35],work:[-4.0,9.35,-1.2],look:[.5,-1.2],color:'#d9d2c3',activity:'direction'}
+    {name:'ARI',zone:'control',home:[.5,9.35,-4.35],work:[-4.0,9.35,-1.2],look:[.5,-1.2],color:'#d9d2c3',activity:'direction',skin:'#c4a48a',hair:'#8d8a84',style:'short',pants:'#2a3238'}
   ];
-  const skin='#b9a891',pants='#29373e',shoe='#202b30';
+  const shoe='#1c2327';
   function joint(parent,x=0,y=0,z=0){const node=new THREE.Object3D();node.position.set(x,y,z);parent.add(node);return node;}
   function part(kind,parent,position,scale,color){const node=joint(parent,...position);node.scale.set(...scale);parts[kind].push({node,color:new THREE.Color(color)});return node;}
   function capsule(parent,position,w,h,d,color){return part('capsule',parent,position,[w,h/2,d],color);}
   for(const [index,spec] of specs.entries()){
+    const {skin,pants,hair}=spec;
     const rig=joint(root,...spec.home);rig.name=`agent:${spec.name}`;
     const hips=joint(rig,0,.86),spine=joint(hips,0,.11);
     capsule(hips,[0,.035,0],.28,.23,.22,pants);
@@ -30,6 +33,10 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
     capsule(spine,[0,.49,0],.09,.12,.09,skin);
     const head=joint(spine,0,.61);
     part('sphere',head,[0,.045,.015],[.115,.135,.12],skin);
+    // Hair gives each person a readable silhouette from the orbit camera.
+    part('sphere',head,[0,.09,-.022],spec.style==='full'?[.132,.125,.136]:[.122,.112,.126],hair);
+    if(spec.style==='long')capsule(head,[0,-.075,-.078],.19,.3,.075,hair);
+    if(spec.style==='bun')part('sphere',head,[0,.19,-.085],[.052,.052,.052],hair);
     const arms=[],legs=[];
     for(const side of [-1,1]){
       const shoulder=joint(spine,side*.225,.40,0);
@@ -47,7 +54,7 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
     }
     const shadow=part('shadow',rig,[0,.012,0],[.8,.65,1],'#ffffff');shadow.rotation.x=-Math.PI/2;
     const lookYaw=Math.atan2(spec.look[0]-spec.home[0],spec.look[1]-spec.home[2]);rig.rotation.y=lookYaw;
-    actors.push({...spec,index,rig,hips,spine,chest,head,arms,legs,lookYaw,home:new THREE.Vector3(...spec.home),work:new THREE.Vector3(...spec.work),route:null,activityWeight:0,walking:false,stride:0});
+    actors.push({...spec,index,rig,hips,spine,chest,head,arms,legs,lookYaw,home:new THREE.Vector3(...spec.home),work:new THREE.Vector3(...spec.work),route:null,activityWeight:0,walking:false,stride:0,speed:0});
   }
   const geometries={capsule:new THREE.CapsuleGeometry(.5,1,3,8),sphere:new THREE.SphereGeometry(1,10,7),shadow:new THREE.PlaneGeometry(1,1)};
   const meshes={};
@@ -64,11 +71,13 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
   let workflow=null,ambient=true;
   let seed=Math.floor(Math.random()*233280);const random=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
   let time=0,last=performance.now(),invalid=true,updates=0;
+  // Nobody leaves the desk at the same moment.
+  actors.forEach((a,i)=>{a.nextWander=5+i*3.3+random()*7;});
   const frameInterval=1000/24;
   // The existing UI motion token: cubic-bezier(.77,0,.175,1).
   function easeInOut(x){let lo=0,hi=1,t=x;for(let i=0;i<12;i++){const v=3*(1-t)*(1-t)*t*.77+3*(1-t)*t*t*.175+t*t*t;if(v<x)lo=t;else hi=t;t=(lo+hi)/2;}return 3*(1-t)*t*t+t*t*t;}
   function enabled(){return userEnabled&&!media.matches;}
-  function yawToward(actor,x,z,dt){const target=Math.atan2(x,z),difference=Math.atan2(Math.sin(target-actor.rig.rotation.y),Math.cos(target-actor.rig.rotation.y));actor.rig.rotation.y+=difference*(1-Math.exp(-dt*8));}
+  function yawToward(actor,x,z,dt,rate=5){const target=Math.atan2(x,z),difference=Math.atan2(Math.sin(target-actor.rig.rotation.y),Math.cos(target-actor.rig.rotation.y));actor.rig.rotation.y+=difference*(1-Math.exp(-dt*rate));return difference;}
   function footClearance(actor,foot){const e=foot.matrixWorld.elements;return e[13]-Math.hypot(e[1],e[5],e[9])-actor.rig.position.y;}
   function writeInstances(){
     root.updateMatrixWorld(true);
@@ -78,11 +87,11 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
     }
     for(const kind of Object.keys(parts)){parts[kind].forEach((p,i)=>meshes[kind].setMatrixAt(i,p.node.matrixWorld));meshes[kind].instanceMatrix.needsUpdate=true;}
   }
-  function settle(){for(const a of actors){a.route=null;a.walking=false;a.stride=0;a.rig.position.copy(a.home);a.rig.rotation.set(0,a.lookYaw,0);a.hips.position.y=.86;a.spine.rotation.set(0,0,0);a.chest.scale.y=.26;a.head.rotation.set(0,0,0);for(const arm of a.arms){arm.shoulder.rotation.set(0,0,arm.side*.07);arm.elbow.rotation.set(-.12,0,0);}for(const leg of a.legs){leg.hip.rotation.set(0,0,0);leg.knee.rotation.set(0,0,0);}}writeInstances();}
+  function settle(){for(const a of actors){a.route=null;a.walking=false;a.stride=0;a.speed=0;a.rig.position.copy(a.home);a.rig.rotation.set(0,a.lookYaw,0);a.hips.position.y=.86;a.spine.rotation.set(0,0,0);a.chest.scale.y=.26;a.head.rotation.set(0,0,0);for(const arm of a.arms){arm.shoulder.rotation.set(0,0,arm.side*.07);arm.elbow.rotation.set(-.12,0,0);}for(const leg of a.legs){leg.hip.rotation.set(0,0,0);leg.knee.rotation.set(0,0,0);}}writeInstances();}
   function routeTo(actor,target){
     const distance=actor.rig.position.distanceTo(target);
     if(distance<.008){actor.route=null;return;}
-    actor.route={from:actor.rig.position.clone(),to:target.clone(),start:time,duration:Math.max(1.6,Math.min(3.4,distance/.48))};
+    actor.route={from:actor.rig.position.clone(),to:target.clone(),elapsed:0,done:0,...routeTiming(distance)};
   }
   // Two people can share a room (NOA and JOHN in Create): a named agent in the workflow wins over the room.
   function engagedIn(actor){
@@ -103,10 +112,10 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
     if(!ambient||workflow||presentation||actor.zone===(selected||null)&&selected!=='all'&&selected)return;
     if(actor.route||time<(actor.nextWander||0))return;
     const floor=floorOfY(actor.home.y);
-    if(actor.away){actor.away=false;routeTo(actor,actor.home);actor.nextWander=time+8+random()*10;return;}
-    const point=pickWaypoint(random,floor,[actor.rig.position.x,actor.rig.position.z]);
+    if(actor.away){actor.away=false;routeTo(actor,actor.home);return;}
+    const point=pickWaypoint(random,floor,[actor.rig.position.x,actor.rig.position.z],{maxDistance:6});
     if(!point){actor.nextWander=time+6;return;}
-    actor.away=true;routeTo(actor,new THREE.Vector3(point[0],actor.home.y,point[1]));actor.nextWander=time+3+random()*5;
+    actor.away=true;routeTo(actor,new THREE.Vector3(point[0],actor.home.y,point[1]));
   }
   function invalidate(){invalid=true;onInvalidate();}
   function mediaChanged(){last=performance.now();if(media.matches)settle();else syncRoutes();invalidate();}
@@ -120,11 +129,14 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
       wander(actor);
       let gait=0,speedEnvelope=0;
       if(actor.route){
-        const route=actor.route,t=Math.min(1,(time-route.start)/route.duration),p=easeInOut(t);
-        actor.rig.position.lerpVectors(route.from,route.to,p);
-        speedEnvelope=Math.sin(Math.PI*t);actor.stride+=dt*7.5;gait=Math.sin(actor.stride)*speedEnvelope;
-        yawToward(actor,route.to.x-route.from.x,route.to.z-route.from.z,dt);
-        if(t===1){actor.route=null;actor.rig.position.copy(route.to);}
+        // Turn towards the path first, then walk it at a steady pace; the stride follows the ground actually covered.
+        const route=actor.route,off=yawToward(actor,route.to.x-route.from.x,route.to.z-route.from.z,dt,route.elapsed?6:4.5);
+        if(route.elapsed||Math.abs(off)<.45)route.elapsed+=dt;
+        const covered=routeProgress(route,route.elapsed),step=covered-route.done;route.done=covered;
+        actor.rig.position.lerpVectors(route.from,route.to,covered/route.length);
+        actor.speed=dt>0?step/dt:0;speedEnvelope=Math.min(1,actor.speed/WALK_SPEED);
+        actor.stride+=step/STRIDE_LENGTH*Math.PI*2;gait=Math.sin(actor.stride)*speedEnvelope;
+        if(route.elapsed>=route.duration){actor.route=null;actor.speed=0;actor.rig.position.copy(route.to);actor.nextWander=time+(actor.away?6+random()*9:16+random()*22);}
       }else{const peer=peerOf(actor);const lookX=actor.away?actor.rig.position.x+Math.sin(time*.3+actor.index):(peer?.rig.position.x??actor.look[0]),lookZ=actor.away?actor.rig.position.z+Math.cos(time*.3+actor.index):(peer?.rig.position.z??actor.look[1]);yawToward(actor,lookX-actor.rig.position.x,lookZ-actor.rig.position.z,dt);}
       actor.walking=!!actor.route;
       if(!actor.route&&!actor.away&&!workflow&&!presentation&&actor.rig.position.distanceTo(actor.home)>.05)routeTo(actor,actor.home);
@@ -133,8 +145,8 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
       actor.activityWeight=THREE.MathUtils.damp(actor.activityWeight,active?1:0,5,dt);
       const work=actor.activityWeight,phase=time+actor.index*2.17;
       const breathe=Math.sin(phase*1.2);
-      actor.hips.position.y=.86+Math.abs(Math.sin(actor.stride*2))*.012*speedEnvelope;
-      actor.spine.rotation.x=-.025*work+.012*breathe;
+      actor.hips.position.y=.86+Math.abs(Math.cos(actor.stride))*.014*speedEnvelope;
+      actor.spine.rotation.x=-.025*work+.012*breathe+.035*speedEnvelope;
       actor.spine.rotation.z=.01*Math.sin(phase*.65)+gait*.018;
       actor.chest.scale.y=.26*(1+.012*breathe);
       actor.head.rotation.y=(.085*Math.sin(phase*.7)+work*.055*Math.sin(phase*1.3))*(1-speedEnvelope);
@@ -161,6 +173,6 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
     anchors(){const out={};for(const a of actors){const p=[a.rig.position.x,a.rig.position.y+2.05,a.rig.position.z];out[a.name]=p;if(!out[a.zone])out[a.zone]=p;}return out;},
     setEnabled(value){userEnabled=!!value;last=performance.now();if(enabled())syncRoutes();invalidate();return this.state();},
     state(){return {enabled:enabled(),userEnabled,reducedMotion:media.matches,paused:presentationPaused,rate:24,ambient,away:actors.filter(a=>a.away).map(a=>a.name)};},
-    diagnostics(){return {...this.state(),presentation,step,workflow,updates,clock:+time.toFixed(3),drawCalls:3,actors:actors.map(a=>({name:a.name,zone:a.zone,position:a.rig.position.toArray(),home:a.home.toArray(),walking:a.walking,footClearance:a.legs.map(leg=>+footClearance(a,leg.foot).toFixed(4)),head:a.head.rotation.toArray().slice(0,3),activity:+a.activityWeight.toFixed(3)}))};}
+    diagnostics(){return {...this.state(),presentation,step,workflow,updates,clock:+time.toFixed(3),drawCalls:3,actors:actors.map(a=>({name:a.name,zone:a.zone,position:a.rig.position.toArray(),home:a.home.toArray(),walking:a.walking,speed:+a.speed.toFixed(3),footClearance:a.legs.map(leg=>+footClearance(a,leg.foot).toFixed(4)),head:a.head.rotation.toArray().slice(0,3),activity:+a.activityWeight.toFixed(3)}))};}
   };
 }

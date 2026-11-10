@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {layoutStations,pickWaypoint,floorOfY,roomSpecs} from '../stations.js';
+import {layoutStations,pickWaypoint,floorOfY,roomSpecs,routeTiming,routeProgress,WALK_SPEED} from '../stations.js';
+import {lightsCommand} from '../commands.js';
 import {isWalkable,floorSpecs} from '../navigation.js';
 
 const registry=JSON.parse(readFileSync(new URL('../scripts/office/capabilities.json',import.meta.url),'utf8'));
@@ -29,4 +30,27 @@ test('Pontos de circulação são andáveis, no mesmo pavimento e alcançáveis 
 
 test('Altura do personagem resolve o pavimento certo',()=>{
   assert.equal(floorOfY(5.07),'upper');assert.equal(floorOfY(.79),'lower');assert.equal(floorOfY(9.35),'top');assert.equal(floorOfY(13.63),'terrace');
+});
+
+test('Agentes caminham, nunca correm: a velocidade fica em passo e cobre o trajeto inteiro',()=>{
+  for(const distance of [.2,.5,1.6,6,18]){
+    const route=routeTiming(distance);let previous=0;
+    for(let t=0;t<=route.duration+.001;t+=1/24){
+      const covered=routeProgress(route,t);
+      assert(covered>=previous-1e-9);assert((covered-previous)*24<=WALK_SPEED+1e-6,`speed over walking pace at ${distance} m`);previous=covered;
+    }
+    assert.equal(routeProgress(route,route.duration),distance);assert.equal(routeProgress(route,0),0);
+    assert(route.duration>=distance/WALK_SPEED);
+  }
+  assert(WALK_SPEED<=1.2);
+});
+test('Pontos de circulação respeitam a distância máxima do passeio',()=>{
+  let seed=7;const random=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+  for(let i=0;i<30;i++){const p=pickWaypoint(random,'lower',[3.3,.5],{maxDistance:6});if(p)assert(Math.hypot(p[0]-3.3,p[1]-.5)<=6);}
+});
+
+test('Comando de voz das luzes: apagar, acender e nada quando não é pedido',()=>{
+  for(const t of ['NAYRA, apaga as luzes do office','Pode apagar a luz, por favor?','Desliga as luzes do escritório','apague a iluminação'])assert.equal(lightsCommand(t),'off',t);
+  for(const t of ['Acende as luzes','NAYRA, liga a luz do office de novo','acenda as luzes do escritório'])assert.equal(lightsCommand(t),'on',t);
+  for(const t of ['Não apaga as luzes','Como está o job da AERA?','A luz do fim de tarde ficou linda','apaga esse post','',null])assert.equal(lightsCommand(t),null,String(t));
 });
