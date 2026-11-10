@@ -180,16 +180,18 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   // Neighbourhood: residential blocks of different width, height, tone and crown. One draw call.
   const cells=8,cell=3.1;
   const lit=[];let wn=17;const wr=()=>{wn=(wn*16807)%2147483647;return wn/2147483647;};
-  for(let i=0;i<cells*cells;i++)lit.push(wr()<.1?(wr()<.8?'#ffc98c':'#cfe2ea'):null);
-  const facadeMap=canvasTexture(256,256,(c)=>{c.fillStyle='#4f555b';c.fillRect(0,0,256,256);for(let y=0;y<cells;y++){c.fillStyle='#5d6368';c.fillRect(0,y*32+26,256,6);for(let x=0;x<cells;x++){c.fillStyle='#232a30';c.fillRect(x*32+6,y*32+8,9,16);c.fillRect(x*32+17,y*32+8,9,16);}}});
-  const glowMap=canvasTexture(256,256,(c)=>{c.fillStyle='#000';c.fillRect(0,0,256,256);for(let y=0;y<cells;y++)for(let x=0;x<cells;x++){const v=lit[y*cells+x];if(!v)continue;c.fillStyle=v;c.globalAlpha=.45+wr()*.45;c.fillRect(x*32+6,y*32+8,9,16);if(wr()>.4)c.fillRect(x*32+17,y*32+8,9,16);}c.globalAlpha=1;});
+  for(let i=0;i<cells*cells;i++)lit.push(wr()<.13?(wr()<.85?'#ffc98c':'#cfe2ea'):null);
+  // Each floor is a long recessed balcony behind a slab edge and a rail, split by slim piers: the usual seafront block.
+  const facadeMap=canvasTexture(256,256,(c)=>{c.fillStyle='#4c5258';c.fillRect(0,0,256,256);for(let y=0;y<cells;y++){c.fillStyle='#1d242a';c.fillRect(0,y*32+4,256,19);c.fillStyle='#2b3238';c.fillRect(0,y*32+17,256,6);c.fillStyle='#646a6e';c.fillRect(0,y*32+25,256,7);for(let x=0;x<cells;x++){c.fillStyle='#4c5258';c.fillRect(x*32,y*32+4,3,21);}}});
+  const glowMap=canvasTexture(256,256,(c)=>{c.fillStyle='#000';c.fillRect(0,0,256,256);for(let y=0;y<cells;y++)for(let x=0;x<cells;x++){const v=lit[y*cells+x];if(!v)continue;c.fillStyle=v;c.globalAlpha=.3+wr()*.4;c.fillRect(x*32+4,y*32+5,wr()>.5?27:13,12);}c.globalAlpha=1;});
   const tones=[[.5,.5,.52],[.62,.59,.54],[.4,.43,.46],[.68,.66,.63],[.46,.42,.39]];
   const blocks=[];
   const volume=(x,z,w,h,d,tone,y=0)=>{
-    const g=new THREE.BoxGeometry(w,h,d),uv=g.attributes.uv,ou=Math.floor(wr()*cells)/cells,ov=Math.floor(wr()*cells)/cells;
+    const g=new THREE.BoxGeometry(w,h,d),uv=g.attributes.uv,ou=Math.floor(wr()*cells)/cells,ov=Math.floor(wr()*cells)/cells,blind=wr()<.55;
     for(let i=0;i<uv.count;i++){
       const face=Math.floor(i/4);
-      if(face===2||face===3){uv.setXY(i,.02,.02);continue;}
+      // Roofs and, on most blocks, the two side walls are plain: blind gables between neighbours.
+      if(face===2||face===3||(blind&&face<2)){uv.setXY(i,.02,.02);continue;}
       const run=face<2?d:w;uv.setXY(i,ou+uv.getX(i)*Math.max(1,Math.round(run/cell))/cells,ov+uv.getY(i)*Math.max(1,Math.round(h/cell))/cells);
     }
     const colors=new Float32Array(uv.count*3);for(let i=0;i<uv.count;i++)colors.set(tone,i*3);g.setAttribute('color',new THREE.BufferAttribute(colors,3));
@@ -198,6 +200,8 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   const block=(x,z,w,h,d)=>{
     // Nothing is built where the orbit camera can travel.
     const [wx,wz]=toWorld(x,z);if(Math.hypot(wx,wz)<(wz>-30?104:84))return;
+    // The avenue keeps an open corridor to the headland.
+    if(x<0&&z>-48&&Math.hypot(x,z)<175)return;
     const tone=tones[Math.floor(wr()*tones.length)],kind=wr();
     volume(x,z,w,h,d,tone);
     if(kind<.4)volume(x,z,w*.62,cell*2,d*.66,tone,h);
@@ -258,5 +262,6 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
     for(const car of cars)car.position.x=260-((260-car.userData.start+t*car.userData.speed)%520);
     return true;
   }
-  return {update,setLow(value){low=!!value;}};
+  // The floor-plan cut shows the pavilion alone: trees and palms would be sliced by the clipping planes.
+  return {update,setLow(value){low=!!value;},setVisible(value){far.visible=!!value;}};
 }

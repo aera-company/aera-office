@@ -15,7 +15,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   const scene = new THREE.Scene();
   // Blue hour on the shoreline: a sky dome with the last warm band to the west; the fog takes the horizon haze.
   scene.background = new THREE.Color(HAZE);
-  scene.fog = new THREE.Fog(HAZE,55,400);
+  scene.fog = new THREE.Fog(HAZE,50,330);
   const sky = createSky();scene.add(sky.mesh);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -421,13 +421,14 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     const now=performance.now();if(!force&&now-lastNavigation<80)return;lastNavigation=now;
     onNavigation({mode:viewMode,floor:floorMode,zone:currentZone,position:camera.position.toArray(),yaw,transitioning:!!transition});
   }
-  function clearClipping(){renderer.clippingPlanes=[];dirty=true;}
+  function clearClipping(){renderer.clippingPlanes=[];leblon.setVisible(true);dirty=true;}
   function setClipping(floor){
     if(floor==='lower')renderer.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,-1,0),4.54),new THREE.Plane(new THREE.Vector3(0,1,0),-.44)];
     else if(floor==='upper')renderer.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,-1,0),8.75),new THREE.Plane(new THREE.Vector3(0,1,0),-4.98)];
     else if(floor==='top')renderer.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,-1,0),13.03),new THREE.Plane(new THREE.Vector3(0,1,0),-9.26)];
     else if(floor==='terrace')renderer.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,1,0),-13.52)];
     else clearClipping();
+    if(renderer.clippingPlanes.length)leblon.setVisible(false);
     dirty=true;
   }
   function frameOffset(){
