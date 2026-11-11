@@ -7,20 +7,22 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 // site +z runs towards the sea, site -x runs west along the avenue to the twin-peak headland.
 export const HAZE='#5b6672';
 export const SITE_YAW=-Math.PI/6;
-export const shore={avenue:[28.5,40.5],cycle:[40.7,43.1],boardwalk:[43.1,49.5],sand:49.5,sea:76};
+export const shore={avenue:[28.5,40.5],cycle:[40.7,43.1],boardwalk:[43.1,49.5],sand:49.5,sea:68};
 const cos=Math.cos(SITE_YAW),sin=Math.sin(SITE_YAW);
 // Site coordinates to world coordinates, as [x, z].
 export function toWorld(x,z){return [x*cos+z*sin,-x*sin+z*cos];}
 // Where the low sun sits: behind the headland, as seen from the plaza.
 const SUN=new THREE.Vector3(-.8,.04,-.6).normalize();
 export const sunDirection=SUN.clone();
+// The moon hangs low over the sea (site frame), so at night its path of light runs across the water toward the beach.
+const MOON_SITE=[-.12,.14,.98];
 
 export function createSky(){
   const material=new THREE.ShaderMaterial({
     side:THREE.BackSide,depthWrite:false,fog:false,
-    uniforms:{zenith:{value:new THREE.Color('#0b1826')},mid:{value:new THREE.Color('#3a5670')},haze:{value:new THREE.Color(HAZE)},glow:{value:new THREE.Color('#e2a983')},rose:{value:new THREE.Color('#7c7890')},deep:{value:new THREE.Color('#0c151c')},sun:{value:SUN.clone()},gains:{value:new THREE.Vector3(.82,.42,.22)}},
+    uniforms:{zenith:{value:new THREE.Color('#0b1826')},mid:{value:new THREE.Color('#3a5670')},haze:{value:new THREE.Color(HAZE)},glow:{value:new THREE.Color('#e2a983')},rose:{value:new THREE.Color('#7c7890')},deep:{value:new THREE.Color('#0c151c')},sun:{value:SUN.clone()},gains:{value:new THREE.Vector3(.82,.42,.22)},moon:{value:new THREE.Vector3()},moonLight:{value:0}},
     vertexShader:'varying vec3 vDir;void main(){vDir=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-    fragmentShader:`uniform vec3 zenith,mid,haze,glow,rose,deep,sun,gains;varying vec3 vDir;
+    fragmentShader:`uniform vec3 zenith,mid,haze,glow,rose,deep,sun,gains,moon;uniform float moonLight;varying vec3 vDir;
       void main(){
         vec3 d=normalize(vDir);float h=d.y;
         vec3 c=mix(haze,mid,smoothstep(0.,.2,h));c=mix(c,zenith,smoothstep(.12,.7,h));
@@ -30,18 +32,20 @@ export function createSky(){
         c=mix(c,glow,low*pow(az,3.)*gains.x);
         float toSun=max(dot(d,sun),0.);
         c+=glow*(pow(toSun,40.)*.27+pow(toSun,900.)*1.4)*gains.z;
+        float toMoon=dot(d,moon);c+=vec3(.86,.9,1.)*moonLight*(smoothstep(.99955,.9998,toMoon)*1.4+pow(max(toMoon,0.),260.)*.08);
         c=mix(deep,c,smoothstep(-.45,-.01,h));
         gl_FragColor=vec4(c,1.);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`
   });
+  {const [mx,mz]=toWorld(MOON_SITE[0],MOON_SITE[2]);material.uniforms.moon.value.set(mx,MOON_SITE[1],mz).normalize();}
   const mesh=new THREE.Mesh(new THREE.SphereGeometry(760,48,24),material);mesh.name='AERA_SKY';mesh.frustumCulled=false;mesh.renderOrder=-10;
   // Sky for a moment of the day (see daylight.js); returns the sun direction in world coordinates.
   function setDaylight(s){
     const u=material.uniforms,[x,z]=toWorld(s.sun[0],s.sun[2]);
     for(const key of ['zenith','mid','haze','glow','rose'])u[key].value.set(s[key]);
-    u.gains.value.set(s.glowLow,s.glowHigh,s.disc);u.sun.value.set(x,s.sun[1],z).normalize();
+    u.gains.value.set(s.glowLow,s.glowHigh,s.disc);u.moonLight.value=s.nightLights;u.sun.value.set(x,s.sun[1],z).normalize();
     return u.sun.value;
   }
   return {mesh,sun:SUN,setDaylight};
@@ -62,6 +66,101 @@ function canvasTexture(w,h,draw,{repeat=[1,1],srgb=true}={}){
   const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(...repeat);if(srgb)t.colorSpace=THREE.SRGBColorSpace;return t;
 }
 
+// The sea surface. Coordinates are the site's: +z runs out to sea, `shoreline` is where the water meets the sand at rest.
+function createOcean({span,shoreline,start,depth}){
+  const geometry=new THREE.PlaneGeometry(span,depth,1,1);geometry.rotateX(-Math.PI/2);geometry.translate(0,-.3,start+depth/2);
+  const uniforms=THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{
+    time:{value:0},shoreline:{value:shoreline},yaw:{value:SITE_YAW},bright:{value:0},
+    shallow:{value:new THREE.Color('#2a9a9a')},deep:{value:new THREE.Color('#0b2530')},sand:{value:new THREE.Color('#7a7262')},
+    skyTop:{value:new THREE.Color('#3a5670')},skyHorizon:{value:new THREE.Color(HAZE)},
+    glintColor:{value:new THREE.Color('#ffe2c0')},glintDir:{value:new THREE.Vector3(0,.1,-1)},glint:{value:1}
+  }]);
+  const material=new THREE.ShaderMaterial({uniforms,fog:true,transparent:true,depthWrite:true,
+    vertexShader:`varying vec3 vLocal;varying vec3 vWorld;
+      #include <fog_pars_vertex>
+      void main(){vLocal=position;vec4 world=modelMatrix*vec4(position,1.);vWorld=world.xyz;vec4 mvPosition=viewMatrix*world;gl_Position=projectionMatrix*mvPosition;
+      #include <fog_vertex>
+      }`,
+    fragmentShader:`uniform float time,shoreline,yaw,bright,glint;uniform vec3 shallow,deep,sand,skyTop,skyHorizon,glintColor,glintDir;
+      varying vec3 vLocal;varying vec3 vWorld;
+      #include <fog_pars_fragment>
+      float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+      float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+      float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(p);p=p*2.03+vec2(17.1,9.2);a*=.5;}return v;}
+      // Height slope of the swell and chop at p (site x, z). Waves run toward the beach (-z).
+      vec2 slope(vec2 p,float detail){
+        vec2 g=vec2(0.);
+        vec4 w[6];
+        w[0]=vec4(normalize(vec2(.12,-1.)),17.,.32);w[1]=vec4(normalize(vec2(-.2,-1.)),11.,.2);w[2]=vec4(normalize(vec2(.35,-1.)),7.,.12);
+        w[3]=vec4(normalize(vec2(1.,-.6)),3.1,.045);w[4]=vec4(normalize(vec2(-.8,-.5)),1.9,.03);w[5]=vec4(normalize(vec2(.3,.9)),1.1,.018);
+        for(int i=0;i<6;i++){
+          float k=6.2832/w[i].z,speed=sqrt(9.8/k),phase=k*dot(w[i].xy,-p)-k*speed*time*.55;
+          float a=w[i].w*(i>2?detail:1.);g+=w[i].xy*(-a*k*cos(phase));
+        }
+        return g;
+      }
+      void main(){
+        vec2 p=vLocal.xz;float d=p.y-shoreline;
+        vec3 toCamera=cameraPosition-vWorld;float dist=length(toCamera);vec3 V=toCamera/dist;
+        float detail=1.-smoothstep(22.,160.,dist);
+        // The swash: the water's edge runs up and back down the sand, uneven along the beach.
+        float edge=-2.6+3.2*sin(time*.38+p.x*.006)+2.*(fbm(vec2(p.x*.045,time*.07))-.5);
+        float wet=d-edge;
+        vec2 g=slope(p,detail)*(.35+.65*smoothstep(-2.,10.,wet))*.62*mix(1.,.16,smoothstep(40.,260.,dist));
+        vec3 nLocal=normalize(vec3(-g.x,1.,-g.y));
+        float c=cos(yaw),s=sin(yaw);vec3 n=normalize(vec3(nLocal.x*c+nLocal.z*s,nLocal.y,-nLocal.x*s+nLocal.z*c));
+        // Water colour: turquoise over the sand bar, deep blue offshore.
+        vec3 water=mix(shallow,deep,smoothstep(2.,38.,d));
+        water=mix(mix(sand,shallow,.55),water,smoothstep(0.,7.,wet));
+        float sunUp=clamp(glintDir.y*3.,0.,1.);
+        vec3 col=water*(.55+.45*max(dot(n,normalize(glintDir)),0.)*sunUp+.25*bright);
+        // Sky reflection with Fresnel, then the sun or moon glint.
+        vec3 r=reflect(-V,n);vec3 sky=mix(skyHorizon*.82,skyTop,smoothstep(0.,.45,r.y));
+        float fres=.02+.98*pow(1.-max(dot(n,V),0.),5.);
+        col=mix(col,sky,clamp(fres*.62,0.,1.));
+        float toSun=max(dot(r,normalize(glintDir)),0.);
+        col+=glintColor*glint*(pow(toSun,700.)*2.2+pow(toSun,60.)*.12+pow(toSun,160.)*.9*(1.-bright)*step(glintDir.y,.2))*smoothstep(-2.,6.,wet);
+        // Breaking waves: fronts rolling in through the surf zone, leaving foam behind them that thins out.
+        float zone=smoothstep(22.,8.,d)*smoothstep(-1.,3.,wet);
+        float sets=d/8.5+time*.13+.12*fbm(vec2(p.x*.03,d*.05));
+        float f=fract(sets);
+        float crest=exp(-f*11.)+.14*exp(-f*3.)*fbm(vec2(p.x*.12,d*.25+time*.2));
+        float breakup=smoothstep(.42,.78,fbm(vec2(p.x*.09,d*.18)+vec2(time*.03,-time*.05)));
+        float foam=clamp(crest*breakup*zone*1.6,0.,1.);
+        // Lace of foam at the edge of the swash, and a thin line far out where the swell breaks on the bar.
+        foam=max(foam,exp(-max(wet,0.)*1.4)*smoothstep(.3,.65,fbm(vec2(p.x*.2,time*.3)))*smoothstep(-1.,0.,wet));
+        foam=max(foam,smoothstep(.66,.9,fbm(vec2(p.x*.05,time*.04)))*exp(-abs(d-26.-2.*sin(time*.2))*.9)*.28);
+        vec3 foamColor=mix(vec3(.16,.19,.22),vec3(.93,.95,.95),.25+.75*bright)*(.8+.2*mix(skyHorizon,skyTop,.5)*1.5);
+        col=mix(col,foamColor,foam);
+        // On the sand side of the swash: dark wet sand that mirrors the sky and dries off up the beach.
+        float alpha=1.;
+        if(wet<0.){
+          float damp=smoothstep(-9.,-.2,wet);
+          vec3 wetSand=sand*.55;wetSand=mix(wetSand,sky,.22+.4*fres);
+          wetSand+=glintColor*glint*pow(toSun,180.)*.9;
+          col=mix(wetSand,col,smoothstep(-.6,0.,wet));alpha=damp*.92;
+        }
+        gl_FragColor=vec4(col,alpha);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+        // Lighter haze than the land: the sea keeps its colour out to the horizon instead of fading to grey near the shore.
+        #ifdef USE_FOG
+          gl_FragColor.rgb=mix(gl_FragColor.rgb,fogColor,smoothstep(fogNear,fogFar*1.6,vFogDepth)*.85);
+        #endif
+      }`});
+  const mesh=new THREE.Mesh(geometry,material);mesh.name='AERA_SEA';mesh.renderOrder=1;mesh.frustumCulled=false;
+  const turquoise=new THREE.Color('#2fb5a8'),moon=new THREE.Vector3(),sun=new THREE.Vector3();
+  const [mx,mz]=toWorld(MOON_SITE[0],MOON_SITE[2]);moon.set(mx,MOON_SITE[1],mz).normalize();
+  function setDaylight(s){
+    const [x,z]=toWorld(s.sun[0],s.sun[2]);sun.set(x,s.sun[1],z).normalize();
+    uniforms.deep.value.set(s.sea);uniforms.shallow.value.set(s.sea).lerp(turquoise,.1+.42*s.bright);
+    uniforms.skyTop.value.set(s.mid);uniforms.skyHorizon.value.set(s.haze);uniforms.bright.value=s.bright;
+    uniforms.glintDir.value.copy(moon).lerp(sun,s.sunKey).normalize();uniforms.glintColor.value.set(s.keyColor);uniforms.glint.value=.55+.9*s.sunKey;
+    uniforms.sand.value.set('#7d7464').multiplyScalar(.35+.65*s.bright+.15);
+  }
+  return {mesh,uniforms,setDaylight};
+}
+
 export function buildLeblon({scene,architecture,box,cylinder,sphere,material,materials,lantern,random,anisotropy=4,keepClear=[]}){
   const still=matchMedia('(prefers-reduced-motion: reduce)');
   // `site` joins the merged architectural batches; `far` holds everything that stays its own draw call.
@@ -78,18 +177,10 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   // Sand, wet sand and sea. One plane for the water; a scrolling normal map and the low light do the rest.
   const sandMap=canvasTexture(256,256,(c,w)=>{c.fillStyle='#e9e2d4';c.fillRect(0,0,w,w);let n=31;const r=()=>{n=(n*16807)%2147483647;return n/2147483647;};for(let i=0;i<9000;i++){c.fillStyle=r()>.5?'rgba(255,245,225,.05)':'rgba(0,0,0,.06)';c.fillRect(r()*w,r()*w,2,2);}},{repeat:[300,140]});
   flat(span,690,0,-.34,shore.sand+345,new THREE.MeshStandardMaterial({color:'#6b6558',roughness:.97,map:sandMap})).name='AERA_SAND';
-  const normals=waveNormals();normals.repeat.set(span/34,640/34);normals.anisotropy=anisotropy;
-  const seaMaterial=new THREE.MeshStandardMaterial({color:'#0b2530',roughness:.34,metalness:.3,normalMap:normals,normalScale:new THREE.Vector2(.2,.2),envMapIntensity:.8});
-  flat(span,640,0,-.3,shore.sea+320,seaMaterial).name='AERA_SEA';
-  flat(span,16,0,-.332,shore.sea-6,new THREE.MeshStandardMaterial({color:'#4a4640',roughness:.22,metalness:.25,envMapIntensity:1.2})).name='AERA_WET_SAND';
-  const foamMap=canvasTexture(512,64,(c,w,h)=>{
-    c.clearRect(0,0,w,h);let n=91;const r=()=>{n=(n*16807)%2147483647;return n/2147483647;};
-    for(let i=0;i<260;i++){const x=r()*w,y=h*.5+(r()-.5)*h*.55*(r()+.3),l=14+r()*70,a=.08+r()*.3;c.fillStyle=`rgba(236,240,238,${a})`;c.beginPath();c.ellipse(x,y,l,1.2+r()*3.2,0,0,Math.PI*2);c.fill();if(x+l>w){c.beginPath();c.ellipse(x-w,y,l,1.2+r()*3.2,0,0,Math.PI*2);c.fill();}}
-  },{repeat:[span/46,1]});
-  const foam=[0,1,2,3].map(i=>{
-    const m=new THREE.MeshBasicMaterial({map:foamMap.clone(),transparent:true,opacity:.5,depthWrite:false});m.map.offset.x=i*.37;m.map.needsUpdate=true;
-    const o=flat(span,2.6+i*1.2,0,-.292+i*.002,shore.sea+1+i*(5.5+i*3),m);o.userData.base=o.position.z;o.userData.phase=i*2.1;return o;
-  });
+  // The sea: one surface drawn by its own shader. Swell rolling in toward the beach, waves that break into foam in the
+  // surf zone, the swash running up the sand and the wet strip it leaves, turquoise shallows turning deep blue, and the
+  // sky of the hour reflected with the sun (or the moon) glinting on it. Only the time moves it; still with reduced motion.
+  const ocean=createOcean({span,shoreline:shore.sea,start:shore.sea-14,depth:680});far.add(ocean.mesh);
 
   // Avenue, kerbs, cycle lane and the seafront promenade. Boxes join the architectural batches.
   const asphalt=material('asphalt','#1e2327',.5,.12);
@@ -139,9 +230,9 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   far.add(new THREE.Mesh(mergeGeometries(rings,false),trim));rings.forEach(g=>g.dispose());
   B(-33,1.05,b0+2.9,4.4,2.5,2.7,oakDark);B(-33,2.38,b0+2.9,6.4,.14,4.3,steel);B(-33,.9,b0+1.45,4.4,.08,.5,limestone);
   for(const x of [-34.4,-33,-31.6])C(x,.2,b0+.9,.17,.75,trim);
-  for(const x of [14,23.5])C(x,.9,62,.05,2.5,steel);
-  const net=new THREE.Mesh(new THREE.PlaneGeometry(9.5,1),new THREE.MeshBasicMaterial({color:'#dfe4e2',transparent:true,opacity:.2,side:THREE.DoubleSide,depthWrite:false}));net.position.set(18.75,1.62,62);far.add(net);
-  for(const y of [1.14,2.1])B(18.75,y,62,9.5,.035,.02,paint);
+  for(const x of [14,23.5])C(x,.9,57,.05,2.5,steel);
+  const net=new THREE.Mesh(new THREE.PlaneGeometry(9.5,1),new THREE.MeshBasicMaterial({color:'#dfe4e2',transparent:true,opacity:.2,side:THREE.DoubleSide,depthWrite:false}));net.position.set(18.75,1.62,57);far.add(net);
+  for(const y of [1.14,2.1])B(18.75,y,57,9.5,.035,.02,paint);
 
   // Coconut palms: one trunk and one crown geometry, instanced.
   const trunkCurve=new THREE.CatmullRomCurve3([[0,0,0],[.22,2.8,0],[.62,5.8,0],[1.05,8.4,0]].map(p=>new THREE.Vector3(...p)));
@@ -265,8 +356,7 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   function update(now){
     if(low||still.matches||now-last<1000/24)return false;
     last=now;const t=now/1000;
-    normals.offset.set(t*.004,t*.011);
-    for(const o of foam){const s=Math.sin(t*.42+o.userData.phase);o.position.z=o.userData.base+s*1.5;o.material.opacity=.28+.26*(s*.5+.5);o.material.map.offset.x+=.00012;}
+    ocean.uniforms.time.value=t;
     for(const car of cars)car.position.x=260-((260-car.userData.start+t*car.userData.speed)%520);
     return true;
   }
@@ -276,7 +366,7 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   function setDaylight(s){
     lampHead.color.lerpColors(lampOff,lampOn,s.lamps);pools.opacity=.2*s.lamps;beamMaterial.opacity=.28*s.lamps;
     city.material.emissiveIntensity=.5*s.windows;hillLights.material.opacity=.75*s.nightLights;hillLights.visible=s.nightLights>.02;
-    seaMaterial.color.set(s.sea);silhouettes.material.color.setRGB(...s.hills);
+    ocean.setDaylight(s);silhouettes.material.color.setRGB(...s.hills);
   }
   return {update,setDaylight,setLow(value){low=!!value;},setVisible(value){far.visible=!!value;}};
 }

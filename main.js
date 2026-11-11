@@ -517,6 +517,13 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     return true;
   }
   function settleDrift(){if(drift)drift.on=false;}
+  // Test hook: any camera position and target, in site coordinates (+z out to sea), to check the surroundings.
+  function peek(position,target,fov=40){
+    const [px,pz]=toWorld(position[0],position[2]),[tx,tz]=toWorld(target[0],target[2]);
+    // Outside the orbit limits on purpose: the camera stays exactly where it is put until the next normal view.
+    viewMode='peek';floorMode='all';controls.enabled=false;clearClipping();markZone('all');camera.clearViewOffset();
+    travel(new THREE.Vector3(px,position[1],pz),new THREE.Vector3(tx,target[1],tz),{instant:true,fov});return true;
+  }
   // Test hook: a close-up in front of an agent's face, to check the figure against the portrait.
   function inspectAgent(name,{angle=.45,distance=1.9}={}){
     const h=team.headOf(name);if(!h)return false;
@@ -704,7 +711,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();thumbnailsReady=true;renderThumbnails();requestAnimationFrame(frame);
   const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
   return {
-    focus,enter,setFloor,showAgent,settleDrift,inspectAgent,setWorkflow,setStations,setStationStates,setCharacterStates,
+    focus,enter,setFloor,showAgent,settleDrift,inspectAgent,peek,setWorkflow,setStations,setStationStates,setCharacterStates,
     selectStation(id){selectedStation=id||'';dirty=true;},
     setAmbient(value){return team.setAmbient(value);},
     setLights,lights(){return lightTarget===1;},setHour,
