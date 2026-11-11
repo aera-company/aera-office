@@ -12,3 +12,7 @@ export function lightsCommand(text,{lightsOff=false}={}){
   if(/\b(acend\w*|lig\w*|religa\w*)\b.{0,40}\b(luz|luzes|iluminacao)\b/.test(t))return 'on';
   return null;
 }
+
+// Which agents a sentence names, in the order of the team. Used to know whose face NAYRA is presenting.
+const AGENTS=[['ARI',/\bari\b/],['MAYA',/\bmaya\b/],['NOA',/\bnoa\b/],['JOHN',/\b(john|jon)\b/],['LEO',/\bleo\b/],['NINA',/\bnina\b/]];
+export function agentsMentioned(text){const t=norm(text);return AGENTS.filter(([,word])=>word.test(t)).map(([name])=>name);}

@@ -4,6 +4,7 @@ import {initClients} from './clients.js';
 import {initPanel} from './panel.js';
 import {initNayra} from './nayra.js';
 import {initNayraVoz} from './nayra-voz.js';
+import {mountFace,poseFace} from './faces.js';
 import {mountOrb} from './orb.js';
 import {VITRINE} from './vitrine.js';
 import {floorSpecs,roomSpecs} from './navigation.js';
@@ -51,6 +52,8 @@ let createPerson='NOA';
 function characterOf(zone){return zone==='create'?createPerson:{think:'MAYA',build:'LEO',grow:'NINA',control:'ARI'}[zone];}
 function profileOf(zone){const base=profiles[zone]||profiles.all;return zone==='create'&&people[createPerson]?{...base,...people[createPerson]}:base;}
 function setCreatePerson(name){if(createPerson===name)return;createPerson=name;if(selected==='create')updateProfile('create');}
+// NOA and JOHN share the Create card: when NAYRA is speaking about one of them, the card shows that one.
+window.addEventListener('aera:agent-presented',e=>{const names=e.detail?.names||[];if(!e.detail?.speaking)return;if(names.includes('JOHN')&&!names.includes('NOA'))setCreatePerson('JOHN');else if(names.includes('NOA')&&!names.includes('JOHN'))setCreatePerson('NOA');});
 document.querySelectorAll('#agent-switch button').forEach(b=>b.onclick=()=>setCreatePerson(b.dataset.person));
 function renderProfileState(zone){
   const name=characterOf(zone);const c=caps?.characters?.[name];const state=$('#agent-state');
@@ -100,7 +103,7 @@ $('#station-copy').onclick=()=>{navigator.clipboard?.writeText($('#station-ask')
 function updateProfile(zone){
   const p=profileOf(zone),r=rooms[zone]||rooms.control;
   const sw=$('#agent-switch');sw.hidden=zone!=='create';sw.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.person===createPerson)));
-  $('#agent-name').textContent=p.name;$('#agent-monogram').textContent=p.name[0];$('#agent-role').textContent=p.role;$('#agent-description').textContent=p.description;$('#agent-delivery').textContent=p.delivery;$('#agent-index').textContent=p.index;
+  $('#agent-name').textContent=p.name;mountFace($('#agent-monogram'),p.name);$('#agent-role').textContent=p.role;$('#agent-description').textContent=p.description;$('#agent-delivery').textContent=p.delivery;$('#agent-index').textContent=p.index;
   $('#agent-zone').textContent=zone.toUpperCase();$('#room-title').textContent=r.title;$('#room-description').textContent=r.description;
   $('#scene-location').textContent=p.location;$('#scene-subtitle').textContent=p.subtitle;
   if(stationId&&caps?.stations.find(s=>s.id===stationId)?.character!==characterOf(zone)){stationId='';$('#station-ficha').hidden=true;office?.selectStation('');}
@@ -315,5 +318,5 @@ async function boot(){
     const hash=location.hash.slice(1);if(hash.startsWith('inside-floor-')&&floorSpecs[hash.slice(13)]){interior=true;setMode('walk');office.enter('control',true);chooseFloor(hash.slice(13));}else if(hash.startsWith('floor-')&&floorSpecs[hash.slice(6)])chooseFloor(hash.slice(6));else if(hash.startsWith('inside-')&&rooms[hash.slice(7)])enterRoom(hash.slice(7));else if(rooms[hash])selectZone(hash,{instant:true});else if(hash==='tour')startTour();else if(hash==='explore')explore();
   }catch(error){clearTimeout(loadTimer);console.error('AERA: cena indisponível',error);fallback(VITRINE?'Navegação 3D não disponível neste navegador.':'WebGL não disponível. Abra os registros offline para apresentar sem renderização 3D.');}
 }
-window.aera={selectZone,startTour,enterRoom,nayra,voz,get state(){return {selected,mode,floor,interior,working,visualMode,ready:!!office,tour:{active:tour.active,paused:tour.paused,index:tour.index}};},get diagnostics(){return office?.diagnostics();}};
+window.aera={selectZone,startTour,enterRoom,nayra,voz,poseFace:pose=>poseFace($('#agent-monogram'),pose),get state(){return {selected,mode,floor,interior,working,visualMode,ready:!!office,tour:{active:tour.active,paused:tour.paused,index:tour.index}};},get diagnostics(){return office?.diagnostics();}};
 boot();

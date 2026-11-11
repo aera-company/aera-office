@@ -387,3 +387,5 @@ body.vitrine .nayra-note{font-size:14px;line-height:1.5;color:var(--muted);max-w
 .nayra-login button{min-height:40px;padding:0 16px;border:1px solid var(--line);background:none;color:var(--muted);font-size:12px;border-radius:0}
 .nayra-login button[type=submit]{border-color:var(--ink);background:var(--ink);color:#0a0a0a}
 .nayra-login button:disabled{opacity:.5}
+
+.agent-monogram.agent-face{width:64px;height:64px;border-radius:0;overflow:hidden;padding:0;background:#11201f;border-color:#f1efe84d}.agent-monogram.agent-face canvas{display:block;width:100%;height:100%;transform-origin:50% 64%;will-change:transform}@media(max-width:900px){.agent-monogram.agent-face{width:54px;height:54px}}

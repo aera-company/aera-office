@@ -1,5 +1,5 @@
 import {VITRINE} from './vitrine.js';
-import {lightsCommand} from './commands.js';
+import {lightsCommand,agentsMentioned} from './commands.js';
 // NAYRA by voice (C49 to C60): presentation mode, the "Oi, NAYRA" listener and the live conversation with the ElevenLabs agent.
 // The listener is the browser's speech recognition (audio goes to Google in Chrome, Apple in Safari) and only waits for phrases.
 // The conversation itself runs on the ElevenLabs agent; credits are spent only while it is open.
@@ -131,7 +131,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
         },
         onError(message,context){report('erro',message+' '+(context?String(context?.message||JSON.stringify(context)).slice(0,300):''));note('Falha na conversa: '+message);},
         onModeChange({mode}){
-          $('#nayra-live-orb').classList.toggle('speaking',mode==='speaking');
+          $('#nayra-live-orb').classList.toggle('speaking',mode==='speaking');present(undefined,mode==='speaking');
           if(mode==='speaking')clearTimeout(silenceTimer);
           else if(farewell)setTimeout(()=>endConversation('despedida'),900);
           else armSilence();
@@ -140,7 +140,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
           const role=m.role||(m.source==='ai'?'agent':'user');
           if(role==='user'){caption('cliente',m.message);armSilence();lights(m.message);const t=norm(m.message);if(NAME.test(t)&&/\b(obrigad[oa]|tchau|ate mais|encerra|pode encerrar)\b/.test(t))farewell=true;}
           // Expressive voice tags such as [warm] guide the voice; they are not shown on screen.
-          else{const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();caption('nayra',said);react(said);if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
+          else{const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();caption('nayra',said);react(said);present(agentsMentioned(said));if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
         }
       });
       brief(convo);
@@ -167,7 +167,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
   }
   function finish(){
     convo=null;clearTimeout(silenceTimer);clearTimeout(maxTimer);cancelAnimationFrame(raf);
-    live().hidden=true;document.body.classList.remove('nayra-live-on');$('#nayra-live-orb').classList.remove('speaking');
+    live().hidden=true;document.body.classList.remove('nayra-live-on');$('#nayra-live-orb').classList.remove('speaking');present([],false);
     indicator();setTimeout(startListening,600);
   }
 
@@ -179,6 +179,12 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
     if(!presenting&&!VITRINE){try{conversation.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Quando falar com ele, chame-o de Chefe, nunca de Tiago, e vá direto ao ponto.');}catch{}}
     // The 3D office obeys one spoken command; she is told so, to confirm instead of saying she cannot do it.
     try{conversation.sendContextualUpdate('O escritório 3D na tela obedece a um comando de voz: quando a pessoa pedir para apagar ou acender as luzes do escritório, o próprio office faz isso ao ouvir o pedido. Confirme em uma frase curta e não diga que não consegue.');}catch{}
+  }
+  // Whose face moves on the room card: the agents named in what NAYRA is saying, and only while she is speaking.
+  let presentedNames=[],nayraSpeaking=false;
+  function present(names,isSpeaking){
+    if(names)presentedNames=names;if(isSpeaking!==undefined)nayraSpeaking=isSpeaking;
+    window.dispatchEvent(new CustomEvent('aera:agent-presented',{detail:{names:presentedNames,speaking:nayraSpeaking}}));
   }
   let lightsOff=false;
   // "Apaga as luzes": the request itself is the event. The scene answers whether it obeyed, and only then is NAYRA told.

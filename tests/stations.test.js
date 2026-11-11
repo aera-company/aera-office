@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {layoutStations,pickWaypoint,floorOfY,roomSpecs,routeTiming,routeProgress,WALK_SPEED} from '../stations.js';
-import {lightsCommand} from '../commands.js';
+import {lightsCommand,agentsMentioned} from '../commands.js';
 import {isWalkable,floorSpecs} from '../navigation.js';
 
 const registry=JSON.parse(readFileSync(new URL('../scripts/office/capabilities.json',import.meta.url),'utf8'));
@@ -56,4 +56,12 @@ test('Comando de voz das luzes: apagar, acender e nada quando não é pedido',()
   for(const t of ['Agora pode acender de novo.','Não acende ainda'])assert.equal(lightsCommand(t),null,t);
   assert.equal(lightsCommand('Não acende ainda',{lightsOff:true}),null);
   for(const t of ['Não apaga as luzes','Como está o job da AERA?','A luz do fim de tarde ficou linda','apaga esse post','',null])assert.equal(lightsCommand(t),null,String(t));
+});
+
+test('Agentes citados numa frase da NAYRA: nomes inteiros, sem falso positivo',()=>{
+  assert.deepEqual(agentsMentioned('A MAYA cuida da estratégia e passa para o NOA.'),['MAYA','NOA']);
+  assert.deepEqual(agentsMentioned('Quem faz a arte é o John, junto com a Nina'),['JOHN','NINA']);
+  assert.deepEqual(agentsMentioned('ARI coordena o time.'),['ARI']);
+  assert.deepEqual(agentsMentioned('O Leonardo vai variar o canoa amanhã'),[]);
+  assert.deepEqual(agentsMentioned(''),[]);
 });
