@@ -8,6 +8,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {createSky,buildLeblon,HAZE,toWorld,SITE_YAW,shore} from './leblon.js';
 import {daylight,hourOf} from './daylight.js';
+import {weatherize,weatherFromQuery,loadWeather,CLEAR} from './weather.js';
 import {drawResearchWall,drawMoodboard,drawFunnel,drawStandby,drawActive,drawBoard} from './interiors.js';
 
 // Real procedural architecture. No AI services, panorama geometry or remote assets.
@@ -448,10 +449,12 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   const poolBase=pool.color.clone(),moonPosition=moon.position.clone(),lanternOff=new THREE.Color('#6b7275'),lanternOn=lantern.color.clone(),sunPosition=new THREE.Vector3();
   const requested=parseFloat(new URLSearchParams(location.search).get('hora'));
   let fixedHour=Number.isFinite(requested)?requested:null,sceneHour=0;
+  // Weather over the beach (see weather.js): the live forecast for Leblon, or `?clima=` to preview one.
+  const pinnedWeather=weatherFromQuery(location.search);let weather=pinnedWeather||CLEAR;
   function applyDaylight(){
     sceneHour=fixedHour??hourOf(new Date());
-    const s=daylight(sceneHour),sun=sky.setDaylight(s);
-    scene.fog.color.set(s.haze);scene.background.set(s.haze);renderer.toneMappingExposure=s.exposure;
+    const s=weatherize(daylight(sceneHour),weather),sun=sky.setDaylight(s);sky.setWind(s.wind,s.windFrom);
+    scene.fog.color.set(s.haze);scene.fog.near=s.fogNear;scene.fog.far=s.fogFar;scene.background.set(s.haze);renderer.toneMappingExposure=s.exposure;
     hemisphere.color.set(s.hemiSky);hemisphere.groundColor.set(s.hemiGround);hemisphere.intensity=s.hemi;
     // The shadow light is the sun by day and a cool sky light after dark; it never drops so low that shadows run off the lot.
     sunPosition.set(sun.x,Math.max(sun.y,.3),sun.z).normalize().multiplyScalar(42);
@@ -487,7 +490,19 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     }catch(error){console.warn('AERA: miniaturas não atualizadas',error);}
   }
   function setHour(hour){fixedHour=Number.isFinite(hour)?hour:null;applyDaylight();return sceneHour;}
+  function setWeather(next){
+    weather={...CLEAR,...(next||{})};applyDaylight();if(thumbnailsReady)renderThumbnails();
+    const credit=document.querySelector('#weather-credit');
+    if(credit){credit.hidden=!weather.source;credit.textContent=weather.source?`${weather.label} no Leblon · dados MET Norway`:'';}
+    window.dispatchEvent(new CustomEvent('aera:weather',{detail:{...weather}}));return {...weather};
+  }
+  function refreshWeather(){
+    if(pinnedWeather)return;
+    let storage=null;try{storage=sessionStorage;}catch{}
+    loadWeather({storage}).then(setWeather).catch(error=>console.info('AERA: clima ao vivo indisponível, céu limpo',error?.message||error));
+  }
   applyDaylight();setInterval(()=>{if(fixedHour===null&&!document.hidden)applyDaylight();},60000);
+  refreshWeather();setInterval(()=>{if(!document.hidden)refreshWeather();},30*60*1000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&fixedHour===null)applyDaylight();});
   let yaw=0,pitch=0,drag=null,lastNavigation=0,lastSampleAt=0,opening=false,skipIntro=null;
   function closeOpening(){opening=false;if(skipIntro){skipIntro.remove();skipIntro=null;}dirty=true;}
@@ -563,7 +578,8 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     const toSea=Math.max(0,shore.sea-siteZ)+Math.max(0,camera.position.y-2)*.6,toAvenue=Math.abs(siteZ-34)+Math.max(0,camera.position.y-2)*.4;
     const inside=viewMode==='walk',hour=sceneHour;
     return {sea:THREE.MathUtils.clamp(1.15-toSea/110,.14,1),city:THREE.MathUtils.clamp(1-toAvenue/75,.2,.85),inside,
-      typing:inside&&team.typingZones().includes(currentZone),traffic:hour>=6.5&&hour<22?.8:hour>=5.5&&hour<23.5?.45:.2};
+      typing:inside&&team.typingZones().includes(currentZone),traffic:hour>=6.5&&hour<22?.8:hour>=5.5&&hour<23.5?.45:.2,
+      rain:weather.rain||0,wind:weather.wind??.25};
   }
   // Test hook: any camera position and target, in site coordinates (+z out to sea), to check the surroundings.
   function peek(position,target,fov=40){
@@ -734,7 +750,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     if(lightLevel!==lightTarget){const step=Math.min(1,Math.max(0,delta)/1400);lightLevel=lightTarget>lightLevel?Math.min(lightTarget,lightLevel+step):Math.max(lightTarget,lightLevel-step);applyLights();moving=true;}
     if(tickDrift(now,delta))moving=true;
     if(viewMode==='orbit')controls.update();
-    const agentsChanged=team.update(now,dirty||moving),shoreChanged=leblon.update(now);
+    const agentsChanged=team.update(now,dirty||moving),shoreChanged=leblon.update(now);if(shoreChanged)sky.tick(now/1000);
     if(workflow&&curve&&!motion.matches){flowDot.position.copy(curve.getPoint((now%2600)/2600));moving=true;}
     if(dirty||moving||agentsChanged||shoreChanged){
       const before=performance.now();renderer.render(scene,camera);const submit=performance.now()-before;updateLabels();emitNavigation();dirty=false;
@@ -763,7 +779,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     focus,enter,setFloor,showAgent,settleDrift,inspectAgent,peek,listener,setBoard,setWorkflow,setStations,setStationStates,setCharacterStates,
     selectStation(id){selectedStation=id||'';dirty=true;},
     setAmbient(value){return team.setAmbient(value);},
-    setLights,lights(){return lightTarget===1;},setHour,
+    setLights,lights(){return lightTarget===1;},setHour,setWeather,weather(){return {...weather};},
     setExploring(value){exploring=value;frameOffset();dirty=true;},
     move(action,active){if(viewMode!=='walk')return;cancelTravel();if(active)moves.add(action);else moves.delete(action);},
     stopMoving(){moves.clear();},

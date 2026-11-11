@@ -11,6 +11,8 @@ export const shore={avenue:[28.5,40.5],cycle:[40.7,43.1],boardwalk:[43.1,49.5],s
 const cos=Math.cos(SITE_YAW),sin=Math.sin(SITE_YAW);
 // Site coordinates to world coordinates, as [x, z].
 export function toWorld(x,z){return [x*cos+z*sin,-x*sin+z*cos];}
+// Direction the wind blows toward, in world x, z, from the compass bearing it comes from (site frame: +x east, +z south, out to sea).
+export function downwind(from=160){const a=(from+180)*Math.PI/180,[x,z]=toWorld(Math.sin(a),-Math.cos(a));return new THREE.Vector2(x,z).normalize();}
 // Where the low sun sits: behind the headland, as seen from the plaza.
 const SUN=new THREE.Vector3(-.8,.04,-.6).normalize();
 export const sunDirection=SUN.clone();
@@ -20,9 +22,13 @@ const MOON_SITE=[-.12,.14,.98];
 export function createSky(){
   const material=new THREE.ShaderMaterial({
     side:THREE.BackSide,depthWrite:false,fog:false,
-    uniforms:{zenith:{value:new THREE.Color('#0b1826')},mid:{value:new THREE.Color('#3a5670')},haze:{value:new THREE.Color(HAZE)},glow:{value:new THREE.Color('#e2a983')},rose:{value:new THREE.Color('#7c7890')},deep:{value:new THREE.Color('#0c151c')},sun:{value:SUN.clone()},gains:{value:new THREE.Vector3(.82,.42,.22)},moon:{value:new THREE.Vector3()},moonLight:{value:0}},
+    uniforms:{zenith:{value:new THREE.Color('#0b1826')},mid:{value:new THREE.Color('#3a5670')},haze:{value:new THREE.Color(HAZE)},glow:{value:new THREE.Color('#e2a983')},rose:{value:new THREE.Color('#7c7890')},deep:{value:new THREE.Color('#0c151c')},sun:{value:SUN.clone()},gains:{value:new THREE.Vector3(.82,.42,.22)},moon:{value:new THREE.Vector3()},moonLight:{value:0},
+      cloud:{value:.12},time:{value:0},drift:{value:new THREE.Vector2(.012,.004)},cloudLight:{value:new THREE.Color('#d9dde0')},cloudShade:{value:new THREE.Color('#7d8790')}},
     vertexShader:'varying vec3 vDir;void main(){vDir=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-    fragmentShader:`uniform vec3 zenith,mid,haze,glow,rose,deep,sun,gains,moon;uniform float moonLight;varying vec3 vDir;
+    fragmentShader:`uniform vec3 zenith,mid,haze,glow,rose,deep,sun,gains,moon,cloudLight,cloudShade;uniform float moonLight,cloud,time;uniform vec2 drift;varying vec3 vDir;
+      float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+      float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+      float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.07+vec2(13.7,5.1);a*=.5;}return v;}
       void main(){
         vec3 d=normalize(vDir);float h=d.y;
         vec3 c=mix(haze,mid,smoothstep(0.,.2,h));c=mix(c,zenith,smoothstep(.12,.7,h));
@@ -33,6 +39,16 @@ export function createSky(){
         float toSun=max(dot(d,sun),0.);
         c+=glow*(pow(toSun,40.)*.27+pow(toSun,900.)*1.4)*gains.z;
         float toMoon=dot(d,moon);c+=vec3(.86,.9,1.)*moonLight*(smoothstep(.99955,.9998,toMoon)*1.4+pow(max(toMoon,0.),260.)*.08);
+        // Clouds: a layer seen from below, drifting with the wind. The cloud uniform sets how much of the sky they cover;
+        // the side facing the sun is lit, the rest is shaded, and the edges near the sun shine.
+        if(h>0.&&cloud>.02){
+          vec2 q=d.xz/(h+.1)*.9+drift*time;
+          float n=fbm(q),dens=smoothstep(.64-.5*cloud,.84-.46*cloud,n)*smoothstep(0.,.16,h);
+          float facing=clamp((n-fbm(q+normalize(sun.xz+1e-4)*.09))*5.+.5,0.,1.);
+          vec3 cc=mix(cloudShade,cloudLight,facing*.75+.25*(1.-dens));
+          cc+=glow*pow(toSun,6.)*(1.-dens)*.55*gains.x;
+          c=mix(c,cc,dens*.94);
+        }
         c=mix(deep,c,smoothstep(-.45,-.01,h));
         gl_FragColor=vec4(c,1.);
         #include <tonemapping_fragment>
@@ -40,15 +56,23 @@ export function createSky(){
       }`
   });
   {const [mx,mz]=toWorld(MOON_SITE[0],MOON_SITE[2]);material.uniforms.moon.value.set(mx,MOON_SITE[1],mz).normalize();}
+  const cloudWhite=new THREE.Color('#f1f2f2'),cloudNight=new THREE.Color('#1c1e22');
   const mesh=new THREE.Mesh(new THREE.SphereGeometry(760,48,24),material);mesh.name='AERA_SKY';mesh.frustumCulled=false;mesh.renderOrder=-10;
   // Sky for a moment of the day (see daylight.js); returns the sun direction in world coordinates.
   function setDaylight(s){
     const u=material.uniforms,[x,z]=toWorld(s.sun[0],s.sun[2]);
     for(const key of ['zenith','mid','haze','glow','rose'])u[key].value.set(s[key]);
-    u.gains.value.set(s.glowLow,s.glowHigh,s.disc);u.moonLight.value=s.nightLights;u.sun.value.set(x,s.sun[1],z).normalize();
+    u.gains.value.set(s.glowLow,s.glowHigh,s.disc);u.moonLight.value=s.nightLights*(1-(s.overcast||0));u.sun.value.set(x,s.sun[1],z).normalize();
+    // Cloud tones follow the light: bright grey by day, warm-lit at sunset, dark with a touch of city glow at night.
+    const b=Math.min(1,s.bright/.8);u.cloud.value=s.cloud??.12;
+    u.cloudLight.value.set(s.haze).lerp(cloudWhite,.5*b).lerp(u.glow.value,.25*s.glowLow*(1-(s.overcast||0)));
+    u.cloudShade.value.set(s.mid).lerp(cloudNight,1-b).multiplyScalar(.82);
     return u.sun.value;
   }
-  return {mesh,sun:SUN,setDaylight};
+  // Clouds drift downwind.
+  function setWind(wind,from=160){material.uniforms.drift.value.copy(downwind(from)).multiplyScalar(.004+.02*wind);}
+  function tick(t){material.uniforms.time.value=t;}
+  return {mesh,sun:SUN,setDaylight,setWind,tick};
 }
 
 function waveNormals(size=128){
@@ -70,7 +94,7 @@ function canvasTexture(w,h,draw,{repeat=[1,1],srgb=true}={}){
 function createOcean({span,shoreline,start,depth}){
   const geometry=new THREE.PlaneGeometry(span,depth,1,1);geometry.rotateX(-Math.PI/2);geometry.translate(0,-.3,start+depth/2);
   const uniforms=THREE.UniformsUtils.merge([THREE.UniformsLib.fog,{
-    time:{value:0},shoreline:{value:shoreline},yaw:{value:SITE_YAW},bright:{value:0},
+    time:{value:0},shoreline:{value:shoreline},yaw:{value:SITE_YAW},bright:{value:0},wind:{value:.25},rain:{value:0},
     shallow:{value:new THREE.Color('#2a9a9a')},deep:{value:new THREE.Color('#0b2530')},sand:{value:new THREE.Color('#7a7262')},
     skyTop:{value:new THREE.Color('#3a5670')},skyHorizon:{value:new THREE.Color(HAZE)},
     glintColor:{value:new THREE.Color('#ffe2c0')},glintDir:{value:new THREE.Vector3(0,.1,-1)},glint:{value:1}
@@ -81,7 +105,7 @@ function createOcean({span,shoreline,start,depth}){
       void main(){vLocal=position;vec4 world=modelMatrix*vec4(position,1.);vWorld=world.xyz;vec4 mvPosition=viewMatrix*world;gl_Position=projectionMatrix*mvPosition;
       #include <fog_vertex>
       }`,
-    fragmentShader:`uniform float time,shoreline,yaw,bright,glint;uniform vec3 shallow,deep,sand,skyTop,skyHorizon,glintColor,glintDir;
+    fragmentShader:`uniform float time,shoreline,yaw,bright,glint,wind,rain;uniform vec3 shallow,deep,sand,skyTop,skyHorizon,glintColor,glintDir;
       varying vec3 vLocal;varying vec3 vWorld;
       #include <fog_pars_fragment>
       float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
@@ -95,7 +119,7 @@ function createOcean({span,shoreline,start,depth}){
         w[3]=vec4(normalize(vec2(1.,-.6)),3.1,.045);w[4]=vec4(normalize(vec2(-.8,-.5)),1.9,.03);w[5]=vec4(normalize(vec2(.3,.9)),1.1,.018);
         for(int i=0;i<6;i++){
           float k=6.2832/w[i].z,speed=sqrt(9.8/k),phase=k*dot(w[i].xy,-p)-k*speed*time*.55;
-          float a=w[i].w*(i>2?detail:1.);g+=w[i].xy*(-a*k*cos(phase));
+          float a=w[i].w*(i>2?detail*(.625+1.5*wind):.875+.5*wind);g+=w[i].xy*(-a*k*cos(phase));
         }
         return g;
       }
@@ -107,6 +131,8 @@ function createOcean({span,shoreline,start,depth}){
         float edge=-2.6+3.2*sin(time*.38+p.x*.006)+2.*(fbm(vec2(p.x*.045,time*.07))-.5);
         float wet=d-edge;
         vec2 g=slope(p,detail)*(.35+.65*smoothstep(-2.,10.,wet))*.62*mix(1.,.16,smoothstep(40.,260.,dist));
+        // Rain stipples the surface: fine pits that come and go.
+        if(rain>0.){vec2 r=p*3.1;g+=rain*detail*.35*(vec2(noise(r+time*9.),noise(r.yx-time*7.3))-.5);}
         vec3 nLocal=normalize(vec3(-g.x,1.,-g.y));
         float c=cos(yaw),s=sin(yaw);vec3 n=normalize(vec3(nLocal.x*c+nLocal.z*s,nLocal.y,-nLocal.x*s+nLocal.z*c));
         // Water colour: turquoise over the sand bar, deep blue offshore.
@@ -130,6 +156,10 @@ function createOcean({span,shoreline,start,depth}){
         // Lace of foam at the edge of the swash, and a thin line far out where the swell breaks on the bar.
         foam=max(foam,exp(-max(wet,0.)*1.4)*smoothstep(.3,.65,fbm(vec2(p.x*.2,time*.3)))*smoothstep(-1.,0.,wet));
         foam=max(foam,smoothstep(.66,.9,fbm(vec2(p.x*.05,time*.04)))*exp(-abs(d-26.-2.*sin(time*.2))*.9)*.28);
+        // With wind the surf zone gets busier and whitecaps break offshore.
+        foam=clamp(foam*(.8+.6*wind),0.,1.);
+        float caps=smoothstep(.7-.12*wind,.86,fbm(p*vec2(.11,.16)+vec2(time*.05,-time*.21)))*smoothstep(.45,1.,wind)*smoothstep(14.,40.,d)*(1.-smoothstep(120.,320.,dist));
+        foam=max(foam,caps*.7);
         vec3 foamColor=mix(vec3(.16,.19,.22),vec3(.93,.95,.95),.25+.75*bright)*(.8+.2*mix(skyHorizon,skyTop,.5)*1.5);
         col=mix(col,foamColor,foam);
         // On the sand side of the swash: dark wet sand that mirrors the sky and dries off up the beach.
@@ -153,9 +183,10 @@ function createOcean({span,shoreline,start,depth}){
   const [mx,mz]=toWorld(MOON_SITE[0],MOON_SITE[2]);moon.set(mx,MOON_SITE[1],mz).normalize();
   function setDaylight(s){
     const [x,z]=toWorld(s.sun[0],s.sun[2]);sun.set(x,s.sun[1],z).normalize();
-    uniforms.deep.value.set(s.sea);uniforms.shallow.value.set(s.sea).lerp(turquoise,.1+.42*s.bright);
+    uniforms.wind.value=s.wind??.25;uniforms.rain.value=s.rain||0;
+    uniforms.deep.value.set(s.sea);uniforms.shallow.value.set(s.sea).lerp(turquoise,(.1+.42*s.bright)*(1-.6*(s.overcast||0)));
     uniforms.skyTop.value.set(s.mid);uniforms.skyHorizon.value.set(s.haze);uniforms.bright.value=s.bright;
-    uniforms.glintDir.value.copy(moon).lerp(sun,s.sunKey).normalize();uniforms.glintColor.value.set(s.keyColor);uniforms.glint.value=.55+.9*s.sunKey;
+    uniforms.glintDir.value.copy(moon).lerp(sun,s.sunKey).normalize();uniforms.glintColor.value.set(s.keyColor);uniforms.glint.value=(.55+.9*s.sunKey)*(1-.85*(s.overcast||0));
     uniforms.sand.value.set('#7d7464').multiplyScalar(.35+.65*s.bright+.15);
   }
   return {mesh,uniforms,setDaylight};
@@ -176,7 +207,7 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
 
   // Sand, wet sand and sea. One plane for the water; a scrolling normal map and the low light do the rest.
   const sandMap=canvasTexture(256,256,(c,w)=>{c.fillStyle='#e9e2d4';c.fillRect(0,0,w,w);let n=31;const r=()=>{n=(n*16807)%2147483647;return n/2147483647;};for(let i=0;i<9000;i++){c.fillStyle=r()>.5?'rgba(255,245,225,.05)':'rgba(0,0,0,.06)';c.fillRect(r()*w,r()*w,2,2);}},{repeat:[300,140]});
-  flat(span,690,0,-.34,shore.sand+345,new THREE.MeshStandardMaterial({color:'#6b6558',roughness:.97,map:sandMap})).name='AERA_SAND';
+  const sand=new THREE.MeshStandardMaterial({color:'#6b6558',roughness:.97,map:sandMap});flat(span,690,0,-.34,shore.sand+345,sand).name='AERA_SAND';
   // The sea: one surface drawn by its own shader. Swell rolling in toward the beach, waves that break into foam in the
   // surf zone, the swash running up the sand and the wet strip it leaves, turquoise shallows turning deep blue, and the
   // sky of the hour reflected with the sun (or the moon) glinting on it. Only the time moves it; still with reduced motion.
@@ -234,6 +265,32 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   const net=new THREE.Mesh(new THREE.PlaneGeometry(9.5,1),new THREE.MeshBasicMaterial({color:'#dfe4e2',transparent:true,opacity:.2,side:THREE.DoubleSide,depthWrite:false}));net.position.set(18.75,1.62,57);far.add(net);
   for(const y of [1.14,2.1])B(18.75,y,57,9.5,.035,.02,paint);
 
+  // Wind in the vegetation: the vertex shader bends each palm frond (and, less, each tree canopy) downwind, with gusts
+  // and a flutter that differ from one plant to the next. Nothing is recomputed on the CPU.
+  const gust={time:{value:0},wind:{value:.25},windDir:{value:downwind(160)}};
+  const sway=(m,{pivot,reach,height})=>{m.onBeforeCompile=shader=>{
+    Object.assign(shader.uniforms,gust);
+    shader.vertexShader='uniform float time,wind;uniform vec2 windDir;\n'+shader.vertexShader.replace('#include <project_vertex>',`
+      vec4 world=vec4(transformed,1.);
+      #ifdef USE_INSTANCING
+        world=instanceMatrix*world;
+      #endif
+      world=modelMatrix*world;
+      vec2 root=modelMatrix[3].xz;
+      #ifdef USE_INSTANCING
+        root+=instanceMatrix[3].xz;
+      #endif
+      float phase=root.x*.37+root.y*.23;
+      float r=${reach};
+      float gustPart=.55+.3*sin(time*1.3+phase*.5)+.15*sin(time*3.1+phase);
+      float bend=wind*wind*gustPart*r;
+      world.xz+=windDir*bend*${height};
+      world.y-=bend*bend*.05;
+      world.y+=sin(time*(5.+4.*wind)+phase*2.+r*1.7)*wind*r*.045;
+      vec4 mvPosition=viewMatrix*world;
+      gl_Position=projectionMatrix*mvPosition;`);
+  };m.customProgramCacheKey=()=>'aera-sway-'+pivot;};
+
   // Coconut palms: one trunk and one crown geometry, instanced.
   const trunkCurve=new THREE.CatmullRomCurve3([[0,0,0],[.22,2.8,0],[.62,5.8,0],[1.05,8.4,0]].map(p=>new THREE.Vector3(...p)));
   const trunkGeometry=new THREE.TubeGeometry(trunkCurve,9,.15,6,false);
@@ -255,6 +312,7 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   for(let i=0;i<26;i++){const x=-90+random()*190,z=-18+random()*42;if(fromPavilion(x,z)>31&&!blocksView(x,z,9))palmSpots.push([x,z,.75+random()*.35]);}
   const trunkMaterial=new THREE.MeshStandardMaterial({color:'#4a4238',roughness:.95});
   const crownMaterial=new THREE.MeshStandardMaterial({color:'#2f4838',roughness:.78,side:THREE.DoubleSide});
+  sway(crownMaterial,{pivot:'palm',reach:'length(transformed.xz-vec2(1.05,0.))',height:'.42'});
   const trunks=new THREE.InstancedMesh(trunkGeometry,trunkMaterial,palmSpots.length),crowns=new THREE.InstancedMesh(crownGeometry,crownMaterial,palmSpots.length);
   const dummy=new THREE.Object3D();
   palmSpots.forEach(([x,z,s],i)=>{dummy.position.set(x,-.35,z);dummy.rotation.set((random()-.5)*.1,random()*Math.PI*2,(random()-.5)*.1);dummy.scale.set(s,s*(.9+random()*.25),s);dummy.updateMatrix();trunks.setMatrixAt(i,dummy.matrix);crowns.setMatrixAt(i,dummy.matrix);});
@@ -269,6 +327,7 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   for(let i=0;i<120&&treeSpots.length<46;i++){const x=-96+random()*200,z=-58+random()*82;if(fromPavilion(x,z)>33&&!blocksView(x,z,13))treeSpots.push([x,z,.8+random()*.6]);}
   for(let x=-250;x<=250;x+=14)if(Math.abs(x-10)>110)treeSpots.push([x+random()*3,a0-3.2,.7+random()*.3]);
   const leafMaterial=new THREE.MeshStandardMaterial({color:'#2f4234',roughness:.97,flatShading:true});
+  sway(leafMaterial,{pivot:'tree',reach:'max(transformed.y-3.6,0.)',height:'.16'});
   const canopies=new THREE.InstancedMesh(canopyGeometry,leafMaterial,treeSpots.length),stems=new THREE.InstancedMesh(stemGeometry,trunkMaterial,treeSpots.length);
   treeSpots.forEach(([x,z,s],i)=>{dummy.position.set(x,-.3,z);dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.set(s,s,s);dummy.updateMatrix();canopies.setMatrixAt(i,dummy.matrix);stems.setMatrixAt(i,dummy.matrix);});
   const scrubSpots=[];for(let x=-250;x<=250;x+=2.2+random()*3.4)scrubSpots.push([x,shore.sand+.9+random()*3.6,.16+random()*.2]);
@@ -352,11 +411,56 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   });
 
   far.traverse(o=>{if(o.isMesh||o.isPoints){o.castShadow=false;o.receiveShadow=false;o.frustumCulled=false;}});
+
+  // Rain: thin streaks in a box that travels with the camera, falling and drifting downwind in the vertex shader.
+  // The drops stay put in the world while the camera moves (the box wraps around it), and none fall inside the
+  // pavilion's glass. How many are drawn follows the weather; with no rain the object is hidden.
+  const DROPS=3200,seeds=new Float32Array(DROPS*2*4),tips=new Float32Array(DROPS*2);
+  {let n=97;const r=()=>{n=(n*16807)%2147483647;return n/2147483647;};
+    for(let i=0;i<DROPS;i++){const a=[r(),r(),r(),r()];for(let e=0;e<2;e++){seeds.set(a,(i*2+e)*4);tips[i*2+e]=e;}}}
+  const rainGeometry=new THREE.BufferGeometry();
+  rainGeometry.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(DROPS*2*3),3));
+  rainGeometry.setAttribute('seed',new THREE.Float32BufferAttribute(seeds,4));rainGeometry.setAttribute('tip',new THREE.Float32BufferAttribute(tips,1));
+  const rainUniforms={time:{value:0},amount:{value:0},center:{value:new THREE.Vector3()},drift:{value:new THREE.Vector2()},tint:{value:new THREE.Color('#c9d2d8')},opacity:{value:.3}};
+  const rain=new THREE.LineSegments(rainGeometry,new THREE.ShaderMaterial({uniforms:rainUniforms,transparent:true,depthWrite:false,fog:false,
+    vertexShader:`uniform float time,amount;uniform vec3 center;uniform vec2 drift;attribute vec4 seed;attribute float tip;varying float vAlpha;
+      void main(){
+        const float BOX=56.,HIGH=26.,FALL=8.5,LENGTH=.85;
+        if(seed.w>amount){gl_Position=vec4(2.,2.,2.,1.);vAlpha=0.;return;}
+        float y=mod(seed.y*HIGH-time*FALL*(.85+.3*seed.x),HIGH)-.3;
+        vec2 xz=seed.xz*BOX+drift*time;xz=center.xz+(fract((xz-center.xz)/BOX+.5)-.5)*BOX;
+        vec3 p=vec3(xz.x,y,xz.y);
+        // Under the roofs of the pavilion it does not rain.
+        if(abs(p.x)<10.6&&p.z>-6.2&&p.z<6.8&&p.y<13.7){gl_Position=vec4(2.,2.,2.,1.);vAlpha=0.;return;}
+        p+=normalize(vec3(drift.x,-FALL,drift.y))*LENGTH*tip;
+        vec4 mv=modelViewMatrix*vec4(p,1.);gl_Position=projectionMatrix*mv;
+        vAlpha=(1.-tip*.8)*smoothstep(.6,3.,-mv.z)*(1.-smoothstep(BOX*.3,BOX*.5,-mv.z));
+      }`,
+    fragmentShader:`uniform vec3 tint;uniform float opacity;varying float vAlpha;void main(){gl_FragColor=vec4(tint,vAlpha*opacity);
+      #include <colorspace_fragment>
+      }`}));
+  rain.name='AERA_RAIN';rain.frustumCulled=false;rain.renderOrder=3;rain.visible=false;scene.add(rain);
+  rain.onBeforeRender=(r,s,camera)=>{rainUniforms.center.value.copy(camera.position);};
+
+  // Wet ground: the street, the promenade and the sand darken and turn glossy in the rain, so they mirror the sky and lamps.
+  // At a low angle a wet surface mirrors the grey sky: a Fresnel sheen toward the sky colour, on top of the darkening.
+  const sheen={wet:{value:0},wetSky:{value:new THREE.Color()}};
+  const wetten=m=>{m.onBeforeCompile=shader=>{Object.assign(shader.uniforms,sheen);
+    shader.fragmentShader='uniform float wet;uniform vec3 wetSky;\n'+shader.fragmentShader.replace('#include <opaque_fragment>',`
+      float grazing=pow(1.-clamp(dot(normal,normalize(vViewPosition)),0.,1.),3.);
+      outgoingLight=mix(outgoingLight,wetSky,wet*(.08+.62*grazing));
+      #include <opaque_fragment>`);};m.customProgramCacheKey=()=>'aera-wet';m.needsUpdate=true;};
+  // Sand only darkens: wet sand stays warm, it does not turn into a mirror.
+  const wets=[[asphalt,.2],[paving,.36],[cycle,.24],[sand,.8]].map(([m,gloss])=>{if(m!==sand)wetten(m);return {m,gloss,roughness:m.roughness,color:m.color.clone()};});
+  // Far hills fade into the rain and the low cloud.
+  const veil={veil:{value:0},veilColor:{value:new THREE.Color()}};
+  silhouettes.material.onBeforeCompile=shader=>{Object.assign(shader.uniforms,veil);
+    shader.fragmentShader='uniform float veil;uniform vec3 veilColor;\n'+shader.fragmentShader.replace('#include <opaque_fragment>','#include <opaque_fragment>\n      gl_FragColor.rgb=mix(gl_FragColor.rgb,veilColor,veil);');};
   let low=false,last=0;
   function update(now){
     if(low||still.matches||now-last<1000/24)return false;
     last=now;const t=now/1000;
-    ocean.uniforms.time.value=t;
+    ocean.uniforms.time.value=t;gust.time.value=t;rainUniforms.time.value=t;
     for(const car of cars)car.position.x=260-((260-car.userData.start+t*car.userData.speed)%520);
     return true;
   }
@@ -367,6 +471,16 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
     lampHead.color.lerpColors(lampOff,lampOn,s.lamps);pools.opacity=.2*s.lamps;beamMaterial.opacity=.28*s.lamps;
     city.material.emissiveIntensity=.5*s.windows;hillLights.material.opacity=.75*s.nightLights;hillLights.visible=s.nightLights>.02;
     ocean.setDaylight(s);silhouettes.material.color.setRGB(...s.hills);
+    // Weather (see weather.js): wind in the plants and on the sea, rain falling, the ground wet.
+    const wind=s.wind??.25,wet=s.rain?Math.min(1,.45+s.rain):0;
+    gust.wind.value=wind;gust.windDir.value.copy(downwind(s.windFrom??160));rainUniforms.drift.value.copy(gust.windDir.value).multiplyScalar(.6+5.5*wind);
+    rainAmount=s.rain?Math.min(1,.18+s.rain*.85):0;rainUniforms.amount.value=rainAmount*(low?.4:1);rain.visible=rainAmount>0&&far.visible;
+    rainUniforms.tint.value.set(s.haze).lerp(drop,.35+.3*s.bright).multiplyScalar(.75+.5*s.bright);rainUniforms.opacity.value=.22+.16*s.bright;
+    for(const w of wets){w.m.roughness=w.roughness+(w.gloss-w.roughness)*wet;w.m.color.copy(w.color).multiplyScalar(1-.4*wet);}
+    sheen.wet.value=wet;sheen.wetSky.value.set(s.haze).multiplyScalar(.75);
+    const o=s.overcast||0;veil.veil.value=Math.min(.75,.4*o+.45*(s.rain||0));veil.veilColor.value.set(s.haze);
+    hillLights.material.opacity*=1-.6*(s.overcast||0);
   }
-  return {update,setDaylight,setLow(value){low=!!value;},setVisible(value){far.visible=!!value;}};
+  const drop=new THREE.Color('#e8eef2');let rainAmount=0;
+  return {update,setDaylight,setLow(value){low=!!value;rainUniforms.amount.value=rainAmount*(low?.4:1);},setVisible(value){far.visible=!!value;rain.visible=!!value&&rainAmount>0;}};
 }

@@ -1,9 +1,10 @@
 // Ambient sound for the office, synthesised in the browser: no recordings, no files, nothing to license or download.
-// Four layers, each following what is on screen:
+// Five layers, each following what is on screen:
 // - the sea: a low wash and the hiss of foam, in sets of waves that build, break and draw back;
 // - the city: a distant hum and, by day and early evening, the odd car passing on the avenue;
 // - the room: a quiet room tone when the visitor walks inside, with the sea muffled through the glass;
-// - typing: keys only in a room where someone is actually seated at a keyboard.
+// - typing: keys only in a room where someone is actually seated at a keyboard;
+// - weather: rain hissing on the ground (and drumming on the glass inside), and wind that comes in gusts.
 // It starts only on a click (browsers require it), stays off until asked, and steps back while NAYRA speaks.
 
 function noiseBuffer(context,seconds,brown=false){
@@ -30,6 +31,8 @@ export function createAmbience(context){
   const cityBus=gain(0);cityBus.connect(duck);
   const roomBus=gain(0);roomBus.connect(duck);
   const keysBus=gain(0);keysBus.connect(duck);
+  const rainBus=gain(0),rainGlass=filter('lowpass',16000);rainBus.connect(rainGlass).connect(duck);
+  const windBus=gain(0);windBus.connect(duck);
 
   // Sea: a low wash (brown noise) and the foam hiss (white noise through a moving band).
   const washGain=gain(.25),hissGain=gain(.08),hissBand=filter('bandpass',1400,.6),washLow=filter('lowpass',320);
@@ -39,8 +42,28 @@ export function createAmbience(context){
   const humGain=gain(.18);loop(brown).connect(filter('lowpass',220)).connect(humGain).connect(cityBus);
   // Room: the faint air of a quiet office.
   loop(brown).connect(filter('lowpass',140)).connect(gain(.14)).connect(roomBus);
+  // Rain: a bright hiss over a soft body. Wind: a low, moving band whose level is shaped into gusts.
+  loop(white).connect(filter('highpass',2400)).connect(gain(.32)).connect(rainBus);
+  loop(white).connect(filter('bandpass',900,.5)).connect(gain(.22)).connect(rainBus);
+  const windGain=gain(.2),windBand=filter('bandpass',380,.9);loop(brown).connect(windBand).connect(windGain).connect(windBus);
 
-  let nextWave=0,nextCar=0,nextKey=0,keysLeft=0,traffic=.6,typing=false;
+  let nextWave=0,nextCar=0,nextKey=0,nextGust=0,nextDrop=0,keysLeft=0,traffic=.6,typing=false,raining=0,windy=.25;
+  function windGust(at){
+    // A gust swells, peaks and dies away; the band rises with it, like air moving faster past the building.
+    const strength=.3+Math.random()*.7,rise=1.2+Math.random()*2.2;
+    windGain.gain.setTargetAtTime(.15+.85*strength,at,rise/3);windBand.frequency.setTargetAtTime(300+420*strength,at,rise/2);
+    windGain.gain.setTargetAtTime(.12+.1*Math.random(),at+rise,1.6);windBand.frequency.setTargetAtTime(320,at+rise,2);
+    return at+rise+1.5+Math.random()*(6-4*windy);
+  }
+  function drop(at){
+    // Heavier drops landing nearby, on the railings and the glass.
+    const source=context.createBufferSource();source.buffer=white;
+    const level=gain(0),tone=filter('bandpass',1800+Math.random()*3200,4);
+    source.connect(tone).connect(level).connect(rainBus);
+    level.gain.setValueAtTime(.3+Math.random()*.4,at);level.gain.exponentialRampToValueAtTime(.001,at+.05);
+    source.start(at,Math.random()*5);source.stop(at+.07);
+    return at+.03+Math.random()*(.5-.4*raining);
+  }
   function wave(at){
     // One wave: it builds, breaks (the hiss jumps and the band opens), then draws back over the sand.
     const build=1.8+Math.random()*1.2,size=.7+Math.random()*.5,crest=at+build;
@@ -80,14 +103,20 @@ export function createAmbience(context){
     while(nextWave<until)nextWave=wave(nextWave);
     while(nextCar<until){nextCar=traffic>.08?car(nextCar):nextCar+6;}
     while(nextKey<until){nextKey=typing?key(nextKey):nextKey+.5;}
+    if(!nextGust)nextGust=now()+.5;if(!nextDrop)nextDrop=now()+.3;
+    while(nextGust<until)nextGust=windGust(nextGust);
+    while(nextDrop<until){nextDrop=raining>0?drop(nextDrop):nextDrop+1;}
   }
   const set=(param,value,time=.8)=>param.setTargetAtTime(value,now(),time);
   return {
     context,schedule,
     // What the listener is near: 0 to 1 levels for the sea and the city, inside a room or not, someone typing there.
-    mix({sea=1,city=.5,inside=false,typing:someoneTyping=false,traffic:cars=.6,ducked=0}={}){
-      typing=someoneTyping;traffic=cars;
-      set(seaBus.gain,sea*(inside?.45:1));set(seaGlass.frequency,inside?650:16000,.6);
+    mix({sea=1,city=.5,inside=false,typing:someoneTyping=false,traffic:cars=.6,ducked=0,rain=0,wind=.25}={}){
+      typing=someoneTyping;traffic=cars;raining=rain;windy=wind;
+      // Outside the rain is a hiss; inside, through the glass, a muffled patter. Wind is only heard when it blows.
+      set(rainBus.gain,rain?(.35+.65*rain)*(inside?.5:1):0,1.5);set(rainGlass.frequency,inside?1100:16000,.6);
+      set(windBus.gain,Math.max(0,wind-.3)*1.3*(inside?.3:1),1.5);
+      set(seaBus.gain,sea*(inside?.45:1)*(1+.5*Math.max(0,wind-.25)));set(seaGlass.frequency,inside?650:16000,.6);
       set(cityBus.gain,city*(inside?.35:1));set(humGain.gain,.1+.12*cars);
       set(roomBus.gain,inside?1:0,1.2);set(keysBus.gain,someoneTyping&&inside?1:0,.4);
       set(duck.gain,1-.72*ducked,.25);
