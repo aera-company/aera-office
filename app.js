@@ -104,7 +104,7 @@ function updateProfile(zone){
   const p=profileOf(zone),r=rooms[zone]||rooms.control;
   const sw=$('#agent-switch');sw.hidden=zone!=='create';sw.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.person===createPerson)));
   $('#agent-name').textContent=p.name;mountFace($('#agent-monogram'),p.name);$('#agent-role').textContent=p.role;$('#agent-description').textContent=p.description;$('#agent-delivery').textContent=p.delivery;$('#agent-index').textContent=p.index;
-  $('#agent-zone').textContent=zone.toUpperCase();$('#room-title').textContent=r.title;$('#room-description').textContent=r.description;
+  $('#agent-zone').textContent=zone.toUpperCase();$('#agent-zone').dataset.agent=p.name;$('#room-title').textContent=r.title;$('#room-description').textContent=r.description;
   $('#scene-location').textContent=p.location;$('#scene-subtitle').textContent=p.subtitle;
   if(stationId&&caps?.stations.find(s=>s.id===stationId)?.character!==characterOf(zone)){stationId='';$('#station-ficha').hidden=true;office?.selectStation('');}
   renderProfileState(zone);
