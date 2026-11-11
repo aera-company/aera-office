@@ -9,7 +9,10 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
   const root=new THREE.Group();root.name='AERA_PROPOSED_AGENTS';scene.add(root);
   const parts={capsule:[],sphere:[],shadow:[]},actors=[];
   // Matte, like the clay figures of the portraits: no sheen, so dark hair stays dark under the warm room lights.
-  const material=new THREE.MeshLambertMaterial({color:'#ffffff'});
+  // The rooms are lit by strong warm lamps, and a person standing right under one would wash out to white. The figures
+  // compress their own brightness (keeping the hue), so skin, hair and clothes hold the tones of the portraits anywhere.
+  const material=new THREE.MeshLambertMaterial({color:new THREE.Color().setScalar(.9)});
+  material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <opaque_fragment>','outgoingLight*=1./(1.+max(outgoingLight.r,max(outgoingLight.g,outgoingLight.b))*.95);\n#include <opaque_fragment>');};
   const specs=[
     {name:'MAYA',zone:'think',home:[-3.0,5.07,1.55],work:[-3.0,5.07,.4],look:[-5.8,-.7],color:'#59665c',activity:'table',skin:'#cfa283',hair:'#16120f',style:'full',pants:'#1f2326'},
     {name:'NOA',zone:'create',home:[3.0,5.07,2.65],work:[3.0,5.07,1.4],look:[5.6,.7],color:'#a9803f',activity:'table',skin:'#d3a882',hair:'#4a3020',style:'short',pants:'#29373e'},
