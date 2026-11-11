@@ -101,3 +101,12 @@ test('Sincronia da fala: o nome do agente sai com o instante exato em que é dit
   assert.deepEqual(t.push(chunk('.')).map(x=>x.name),['NINA']);
   assert.deepEqual(createSpeechTimeline().push({chars:[]}),[]);
 });
+
+test('Quadro da operação: cada trabalho real na coluna do seu estágio, concluídos de fora',async()=>{
+  const {boardColumns}=await import('../interiors.js');
+  const jobs=[{title:'a',status:'queued'},{title:'b',status:'running'},{title:'c',status:'em_sessao'},{title:'d',status:'reviewing'},{title:'e',status:'awaiting_approval'},{title:'f',status:'done'},{title:'g',status:'canceled'},{title:'h',status:'approved'}];
+  const cols=boardColumns(jobs);
+  assert.deepEqual(cols.map(c=>c.title),['Na fila','Em produção','Em revisão','Para aprovar']);
+  assert.deepEqual(cols.map(c=>c.jobs.map(j=>j.title).join('')),['a','bc','d','e']);
+  assert.deepEqual(boardColumns([]).map(c=>c.jobs.length),[0,0,0,0]);assert.deepEqual(boardColumns(undefined).map(c=>c.jobs.length),[0,0,0,0]);
+});

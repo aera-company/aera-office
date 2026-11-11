@@ -8,6 +8,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {createSky,buildLeblon,HAZE,toWorld,SITE_YAW,shore} from './leblon.js';
 import {daylight,hourOf} from './daylight.js';
+import {drawResearchWall,drawMoodboard,drawFunnel,drawStandby,drawActive,drawBoard} from './interiors.js';
 
 // Real procedural architecture. No AI services, panorama geometry or remote assets.
 export async function createOffice({selectZone,onFailure,onQuality,onNavigation=()=>{},onInteraction=()=>{},onStation=()=>{}}) {
@@ -224,8 +225,9 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     box(0,.04,0,.64,.045,.045,steel,g);box(0,.04,0,.045,.045,.6,steel,g);
     box(-.36,.66,0,.04,.035,.47,trim,g);box(.36,.66,0,.04,.035,.47,trim,g);
   }
+  const monitors=[];
   function desk(x,y,z,rotation=0) {
-    const g=group(x,y,z,rotation);
+    const g=group(x,y,z,rotation);monitors.push({g,x,y,z});
     box(0,.76,0,2.32,.08,1.04,oak,g);
     for(const sx of [-.97,.97])box(sx,.38,0,.065,.72,.83,steel,g);
     box(0,1.25,-.21,1.02,.63,.065,steel,g);box(0,1.25,-.17,.96,.56,.012,screen,g);
@@ -251,10 +253,6 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   // JOHN's desk: design and art, against the material board.
   desk(7.6,upper,-3.4,0);
   box(5.7,7.1,-5.39,5.8,2.3,.1,steel);
-  for(let i=0;i<5;i++) {
-    box(3.4+i*1.13,7.2+(i%2)*.2,-5.30,.86,1.25,.025,i%2?artOchre:artWhite);
-    box(3.4+i*1.13,6.44,-5.28,.7,.04,.02,trim);
-  }
   for(const x of [-7.2,-4.4,4.2,7]) {
     cylinder(x,8.45,.1,.014,.8,steel);
     cylinder(x,8.01,.1,.32,.08,steel);
@@ -303,6 +301,46 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     cylinder(x,top+2.66,-1.2,.32,.08,steel);
     cylinder(x,top+2.61,-1.2,.27,.025,warm);
   }
+  // Interiors (interiors.js): the method of each room on its wall, and the live surfaces, the agents' monitors and the
+  // operation board in Comando, which only ever show what the office server reports.
+  function surface(width,height,px,draw,{lit=true,parent=architecture}={}){
+    const canvas=document.createElement('canvas');canvas.width=px;canvas.height=Math.round(px*height/width);
+    draw(canvas.getContext('2d'),canvas.width,canvas.height);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+    const mat=lit?new THREE.MeshStandardMaterial({map:texture,roughness:.88}):new THREE.MeshBasicMaterial({map:texture});
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(width,height),mat);mesh.userData.noBatch=true;parent.add(mesh);
+    return {mesh,canvas,texture,redraw(fn){fn(canvas.getContext('2d'),canvas.width,canvas.height);texture.needsUpdate=true;dirty=true;}};
+  }
+  {const wall=surface(3.6,1.55,1024,drawResearchWall);wall.mesh.position.set(-5.6,6.72,-5.32);}
+  {const board=surface(5.6,2.15,1280,drawMoodboard);board.mesh.position.set(5.7,7.1,-5.33);}
+  {box(6.0,2.98,-5.455,3.06,1.22,.03,trim);const map=surface(2.96,1.12,900,drawFunnel);map.mesh.position.set(6.0,2.98,-5.438);}
+  const operationBoard=surface(5.36,2.68,1400,(c,w,h)=>drawBoard(c,w,h,[]),{lit:false});operationBoard.mesh.position.set(.5,top+2.15,-5.398);
+  operationBoard.mesh.material.color.setScalar(.82);
+  // Monitors: the agents' own desks follow their real state; the rest rest on standby.
+  const deskOwners=[['LEO',-7.6,lower,1.1],['NINA',4.1,lower,-3.3],['JOHN',7.6,upper,-3.4],['ARI',-7.3,top,-3.95]];
+  const screens=monitors.map(m=>{
+    const owner=deskOwners.find(([,x,y,z])=>Math.abs(m.x-x)<.01&&Math.abs(m.y-y)<.01&&Math.abs(m.z-z)<.01)?.[0]||'';
+    const label=owner?`Mesa ${owner==='NINA'||owner==='ARI'?'da':'do'} ${owner}`:'Estação livre';
+    const s=surface(.94,.54,384,(c,w,h)=>drawStandby(c,w,h,{label}),{lit:false,parent:m.g});s.mesh.position.set(0,1.25,-.15);s.mesh.material.color.setScalar(.9);
+    return {...s,owner,label,task:null};
+  });
+  let screenTick=0,screenTimer=0;
+  function paintScreens(){
+    screenTick++;
+    for(const s of screens)if(s.task)s.redraw((c,w,h)=>drawActive(c,w,h,{agent:s.owner,title:s.task.title||'Trabalho em andamento',phase:'Em tarefa',tick:motion.matches?8:screenTick}));
+  }
+  function setScreens(states){
+    let active=false;
+    for(const s of screens){
+      if(!s.owner)continue;
+      const st=states?.[s.owner],task=st&&st.state==='em_tarefa'?(st.task||{}):null,key=task?(task.job_id||'')+(task.title||''):'';
+      if(key!==(s.key||'')){s.key=key;s.task=task;if(!task)s.redraw((c,w,h)=>drawStandby(c,w,h,{label:s.label}));}
+      if(task)active=true;
+    }
+    clearInterval(screenTimer);screenTimer=0;
+    if(active){paintScreens();screenTimer=setInterval(()=>{if(!document.hidden)paintScreens();},450);}
+  }
+  function setBoard(jobs){operationBoard.redraw((c,w,h)=>drawBoard(c,w,h,jobs||[]));}
   // Deterministic tree canopies: same silhouette on every launch and screenshot.
   let seed=42;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   function plant(x,y,z,size=1,tree=false) {
@@ -607,6 +645,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     dirty=true;
   }
   function setCharacterStates(states){
+    setScreens(states);
     // One visual signal for "em tarefa": the room hotspot carries it, derived from server state only.
     for(const {button,zone} of labels){const name=names[zone];const st=states[name];button.classList.toggle('working',!!st&&st.state==='em_tarefa');button.querySelector('small').textContent=st&&st.state==='em_tarefa'?`${name} · em tarefa`:name;}
     dirty=true;
@@ -721,7 +760,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();thumbnailsReady=true;renderThumbnails();requestAnimationFrame(frame);
   const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
   return {
-    focus,enter,setFloor,showAgent,settleDrift,inspectAgent,peek,listener,setWorkflow,setStations,setStationStates,setCharacterStates,
+    focus,enter,setFloor,showAgent,settleDrift,inspectAgent,peek,listener,setBoard,setWorkflow,setStations,setStationStates,setCharacterStates,
     selectStation(id){selectedStation=id||'';dirty=true;},
     setAmbient(value){return team.setAmbient(value);},
     setLights,lights(){return lightTarget===1;},setHour,

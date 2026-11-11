@@ -43,6 +43,8 @@ async function syncCaps(){
     if(!office._stationsLoaded){office.setStations(caps.stations);office._stationsLoaded=true;}
     office.setStationStates(Object.fromEntries(caps.stations.map(s=>[s.id,{state:s.state,state_label:s.state_label}])));
     office.setCharacterStates(caps.characters);
+    // The operation board in Comando lists the real jobs by stage.
+    try{office.setBoard((await operations.api('jobs')).jobs);}catch{}
   }
   if(mode==='focus')renderProfileState(selected);
 }
@@ -365,5 +367,7 @@ async function boot(){
     const hash=location.hash.slice(1);if(hash.startsWith('inside-floor-')&&floorSpecs[hash.slice(13)]){interior=true;setMode('walk');office.enter('control',true);chooseFloor(hash.slice(13));}else if(hash.startsWith('floor-')&&floorSpecs[hash.slice(6)])chooseFloor(hash.slice(6));else if(hash.startsWith('inside-')&&rooms[hash.slice(7)])enterRoom(hash.slice(7));else if(rooms[hash])selectZone(hash,{instant:true});else if(hash==='tour')startTour();else if(hash==='explore')explore();
   }catch(error){clearTimeout(loadTimer);console.error('AERA: cena indisponível',error);fallback(VITRINE?'Navegação 3D não disponível neste navegador.':'WebGL não disponível. Abra os registros offline para apresentar sem renderização 3D.');}
 }
-window.aera={selectZone,startTour,enterRoom,nayra,voz,poseFace:pose=>poseFace($('#agent-monogram'),pose),inspectAgent:(name,options)=>office?.inspectAgent(name,options),ambience:()=>office?.listener(),peek:(position,target,fov)=>office?.peek(position,target,fov),get state(){return {selected,mode,floor,interior,working,visualMode,ready:!!office,tour:{active:tour.active,paused:tour.paused,index:tour.index}};},get diagnostics(){return office?.diagnostics();}};
+window.aera={selectZone,startTour,enterRoom,nayra,voz,poseFace:pose=>poseFace($('#agent-monogram'),pose),inspectAgent:(name,options)=>office?.inspectAgent(name,options),ambience:()=>office?.listener(),
+  // Test hook: feeds the monitors and the operation board as the office server would, to check how they draw.
+  testWork:(characters,jobs)=>{office?.setCharacterStates(characters||{});office?.setBoard(jobs||[]);},peek:(position,target,fov)=>office?.peek(position,target,fov),get state(){return {selected,mode,floor,interior,working,visualMode,ready:!!office,tour:{active:tour.active,paused:tour.paused,index:tour.index}};},get diagnostics(){return office?.diagnostics();}};
 boot();
