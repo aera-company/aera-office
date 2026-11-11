@@ -323,33 +323,70 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   for(const [x,y,z,r,sy] of [[0,5.2,0,2.1,.7],[1.5,4.6,.6,1.5,.65],[-1.4,4.8,-.5,1.6,.6],[.3,6.2,-.9,1.4,.6],[-.5,5.9,1.1,1.5,.6],[.9,5.5,-1.7,1.2,.6]]){const g=blob.clone();g.scale(r,r*sy,r);g.translate(x,y,z);blobs.push(g);}
   const canopyGeometry=mergeGeometries(blobs,false);blobs.forEach(g=>g.dispose());blob.dispose();
   const stemGeometry=new THREE.CylinderGeometry(.13,.2,4.2,6);stemGeometry.translate(0,2.1,0);
-  const treeSpots=[];
-  for(let i=0;i<120&&treeSpots.length<46;i++){const x=-96+random()*200,z=-58+random()*82;if(fromPavilion(x,z)>33&&!blocksView(x,z,13))treeSpots.push([x,z,.8+random()*.6]);}
-  for(let x=-250;x<=250;x+=14)if(Math.abs(x-10)>110)treeSpots.push([x+random()*3,a0-3.2,.7+random()*.3]);
-  const leafMaterial=new THREE.MeshStandardMaterial({color:'#2f4234',roughness:.97,flatShading:true});
-  sway(leafMaterial,{pivot:'tree',reach:'max(transformed.y-3.6,0.)',height:'.16'});
-  const canopies=new THREE.InstancedMesh(canopyGeometry,leafMaterial,treeSpots.length),stems=new THREE.InstancedMesh(stemGeometry,trunkMaterial,treeSpots.length);
-  treeSpots.forEach(([x,z,s],i)=>{dummy.position.set(x,-.3,z);dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.set(s,s,s);dummy.updateMatrix();canopies.setMatrixAt(i,dummy.matrix);stems.setMatrixAt(i,dummy.matrix);});
-  const scrubSpots=[];for(let x=-250;x<=250;x+=2.2+random()*3.4)scrubSpots.push([x,shore.sand+.9+random()*3.6,.16+random()*.2]);
-  const scrub=new THREE.InstancedMesh(canopyGeometry,new THREE.MeshStandardMaterial({color:'#3a4a36',roughness:1,flatShading:true}),scrubSpots.length);
-  scrubSpots.forEach(([x,z,s],i)=>{dummy.position.set(x,-.35-4.2*s*.9,z);dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.set(s*1.6,s,s*1.6);dummy.updateMatrix();scrub.setMatrixAt(i,dummy.matrix);});
-  far.add(canopies,stems,scrub);
+  // Two kinds: the round street tree, and the beach almond (amendoeira) of the Rio seafront, whose leaves grow in flat
+  // tiers on a leaning trunk and turn red and orange a few at a time.
+  const tiers=[],disc=new THREE.IcosahedronGeometry(1,1);
+  for(const [x,y,z,r,sy] of [[.3,3.3,0,2.7,.24],[1.1,3.5,.9,1.7,.22],[-.5,4.4,-.3,2.2,.24],[.2,5.3,.3,1.5,.26],[-1.2,3.6,-.8,1.6,.22]]){const g=disc.clone();g.scale(r,r*sy*2.2,r);g.translate(x,y,z);tiers.push(g);}
+  const almondGeometry=mergeGeometries(tiers,false);tiers.forEach(g=>g.dispose());disc.dispose();
+  const almondStem=new THREE.CylinderGeometry(.12,.2,4,6);almondStem.translate(0,2,0);almondStem.rotateZ(-.12);
+  const treeSpots=[],almondSpots=[];
+  for(let i=0;i<120&&treeSpots.length+almondSpots.length<46;i++){const x=-96+random()*200,z=-58+random()*82;if(fromPavilion(x,z)>33&&!blocksView(x,z,13))(random()<.35?almondSpots:treeSpots).push([x,z,.8+random()*.6]);}
+  for(let x=-250;x<=250;x+=14)if(Math.abs(x-10)>110)almondSpots.push([x+random()*3,a0-3.2,.75+random()*.3]);
+  const leafMaterial=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.97,flatShading:true});
+  sway(leafMaterial,{pivot:'tree',reach:'max(transformed.y-3.,0.)',height:'.16'});
+  // Each crown its own green; among the almonds, one in five has turned.
+  const greens=['#2f4234','#36503a','#2a3d31','#3e5a3c','#334a2f'].map(c=>new THREE.Color(c)),autumn=['#8f4a2a','#a8612e','#6e4a2a'].map(c=>new THREE.Color(c));
+  const planted=(geometry,stem,spots,turn)=>{
+    const crowns=new THREE.InstancedMesh(geometry,leafMaterial,spots.length),stems=new THREE.InstancedMesh(stem,trunkMaterial,spots.length);
+    spots.forEach(([x,z,s],i)=>{dummy.position.set(x,-.3,z);dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.set(s,s*(.9+random()*.2),s);dummy.updateMatrix();crowns.setMatrixAt(i,dummy.matrix);stems.setMatrixAt(i,dummy.matrix);
+      crowns.setColorAt(i,random()<turn?autumn[Math.floor(random()*autumn.length)]:greens[Math.floor(random()*greens.length)]);});
+    far.add(crowns,stems);
+  };
+  planted(canopyGeometry,stemGeometry,treeSpots,0);planted(almondGeometry,almondStem,almondSpots,.2);
+  // Restinga at the top of the sand: low, wide clumps in fresh and dusty greens, not boulders.
+  const scrubSpots=[];for(let x=-250;x<=250;x+=1.6+random()*2.6)scrubSpots.push([x,shore.sand+.9+random()*3.6,.12+random()*.16]);
+  const scrub=new THREE.InstancedMesh(canopyGeometry,new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,flatShading:true}),scrubSpots.length);
+  const dune=['#3f5634','#4b5f38','#36492f','#56603c'].map(c=>new THREE.Color(c));
+  scrubSpots.forEach(([x,z,s],i)=>{dummy.position.set(x,-.35-4.2*s*.95,z);dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.set(s*2,s*1.15,s*2);dummy.updateMatrix();scrub.setMatrixAt(i,dummy.matrix);scrub.setColorAt(i,dune[Math.floor(random()*dune.length)]);});
+  far.add(scrub);
 
   // Neighbourhood: residential blocks of different width, height, tone and crown. One draw call.
   const cells=8,cell=3.1;
   const lit=[];let wn=17;const wr=()=>{wn=(wn*16807)%2147483647;return wn/2147483647;};
-  for(let i=0;i<cells*cells;i++)lit.push(wr()<.13?(wr()<.85?'#ffc98c':'#cfe2ea'):null);
-  // Each floor is a long recessed balcony behind a slab edge and a rail, split by slim piers: the usual seafront block.
-  const facadeMap=canvasTexture(256,256,(c)=>{c.fillStyle='#4c5258';c.fillRect(0,0,256,256);for(let y=0;y<cells;y++){c.fillStyle='#1d242a';c.fillRect(0,y*32+4,256,19);c.fillStyle='#2b3238';c.fillRect(0,y*32+17,256,6);c.fillStyle='#646a6e';c.fillRect(0,y*32+25,256,7);for(let x=0;x<cells;x++){c.fillStyle='#4c5258';c.fillRect(x*32,y*32+4,3,21);}}});
-  const glowMap=canvasTexture(256,256,(c)=>{c.fillStyle='#000';c.fillRect(0,0,256,256);for(let y=0;y<cells;y++)for(let x=0;x<cells;x++){const v=lit[y*cells+x];if(!v)continue;c.fillStyle=v;c.globalAlpha=.3+wr()*.4;c.fillRect(x*32+4,y*32+5,wr()>.5?27:13,12);}c.globalAlpha=1;});
-  const tones=[[.5,.5,.52],[.62,.59,.54],[.4,.43,.46],[.68,.66,.63],[.46,.42,.39]];
+  // About a third of the flats are lit after dark: mostly warm lamps, some cooler, a few blue with a screen on.
+  for(let i=0;i<cells*cells;i++)lit.push(wr()<.3?['#ffc98c','#ffd9a6','#ffbf7a','#e9eef0','#9fb8ff'][Math.floor(wr()*wr()*5)]:null);
+  // Cell 0 always glows: it is also where the glass lobbies at street level take their colour from.
+  lit[0]='#ffd4a0';
+  // Each floor is a long recessed balcony behind a pale slab edge and a glass rail, with sliding doors between slim
+  // piers: the usual seafront block. The walls are light; the vertex colour gives each block its own paint.
+  const facadeMap=canvasTexture(512,512,(c)=>{
+    const u=64;c.fillStyle='#a8a7a2';c.fillRect(0,0,512,512);
+    for(let y=0;y<cells;y++){
+      const top=y*u;
+      c.fillStyle='#39414a';c.fillRect(0,top+8,512,38);                 // recessed balcony, in shade
+      for(let x=0;x<cells;x++){c.fillStyle='#55626c';c.fillRect(x*u+10,top+12,u-20,30);c.fillStyle='#7c8a93';c.fillRect(x*u+u/2-1,top+12,2,30);}
+      c.fillStyle='rgba(170,196,204,.55)';c.fillRect(0,top+32,512,14);  // glass rail
+      c.fillStyle='#c4c2bc';c.fillRect(0,top+46,512,10);                // slab edge
+      c.fillStyle='#a7a6a1';c.fillRect(0,top+56,512,2);
+      for(let x=0;x<cells;x++){c.fillStyle='#a8a7a2';c.fillRect(x*u,top+8,6,38);}
+    }
+  });
+  const glowMap=canvasTexture(512,512,(c)=>{c.fillStyle='#000';c.fillRect(0,0,512,512);for(let y=0;y<cells;y++)for(let x=0;x<cells;x++){const v=lit[y*cells+x];if(!v)continue;c.fillStyle=v;c.globalAlpha=x+y===0?.5:.35+wr()*.5;c.fillRect(x*64+10,y*64+12,wr()>.4||x+y===0?44:22,30);}c.globalAlpha=1;});
+  // White, cream, sand, pale blue-grey, a soft salmon and the odd grey concrete block.
+  const tones=[[.86,.85,.81],[.84,.8,.72],[.76,.7,.61],[.68,.72,.75],[.82,.7,.63],[.56,.57,.58],[.84,.83,.79]];
   const blocks=[];
+  // A box whose every face takes one spot of the facade texture: plain wall (0.01, 0.99) or lobby glass (cell 0).
+  const plain=(x,y,z,w,h,d,tone,u=.004,v=.996)=>{
+    const g=new THREE.BoxGeometry(w,h,d),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,u,v);
+    const colors=new Float32Array(uv.count*3);for(let i=0;i<uv.count;i++)colors.set(tone,i*3);g.setAttribute('color',new THREE.BufferAttribute(colors,3));
+    g.translate(x,y+h/2-.35,z);blocks.push(g);
+  };
   const volume=(x,z,w,h,d,tone,y=0)=>{
     const g=new THREE.BoxGeometry(w,h,d),uv=g.attributes.uv,ou=Math.floor(wr()*cells)/cells,ov=Math.floor(wr()*cells)/cells,blind=wr()<.55;
     for(let i=0;i<uv.count;i++){
       const face=Math.floor(i/4);
       // Roofs and, on most blocks, the two side walls are plain: blind gables between neighbours.
-      if(face===2||face===3||(blind&&face<2)){uv.setXY(i,.02,.02);continue;}
+      if(face===2||face===3||(blind&&face<2)){uv.setXY(i,.004,.996);continue;}
       const run=face<2?d:w;uv.setXY(i,ou+uv.getX(i)*Math.max(1,Math.round(run/cell))/cells,ov+uv.getY(i)*Math.max(1,Math.round(h/cell))/cells);
     }
     const colors=new Float32Array(uv.count*3);for(let i=0;i<uv.count;i++)colors.set(tone,i*3);g.setAttribute('color',new THREE.BufferAttribute(colors,3));
@@ -361,10 +398,19 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
     // The avenue keeps an open corridor to the headland.
     if(x<0&&z>-48&&Math.hypot(x,z)<175)return;
     const tone=tones[Math.floor(wr()*tones.length)],kind=wr();
-    volume(x,z,w,h,d,tone);
-    if(kind<.4)volume(x,z,w*.62,cell*2,d*.66,tone,h);
-    else if(kind<.6){volume(x-w*.2,z,w*.5,cell*3,d*.8,tone,h);}
-    else if(kind<.72)volume(x,z,w+1.2,cell*.33,d+1.2,tone,h);
+    // Street level is open: a glass lobby set back under the block, on a row of columns (the Rio pilotis).
+    const L=cell*1.25,glass=[.75,.8,.82];
+    plain(x,0,z,w-2.4,L,d-2.4,glass,.039,.953);
+    const n=Math.max(2,Math.round(w/6));for(let i=0;i<=n;i++)for(const s of [-1,1])plain(x-w/2+.45+i*(w-.9)/n,0,z+s*(d/2-.45),.5,L,.5,tone);
+    volume(x,z,w,h,d,tone,L);const roof=L+h;
+    if(kind<.4)volume(x,z,w*.62,cell*2,d*.66,tone,roof);
+    else if(kind<.6){volume(x-w*.2,z,w*.5,cell*3,d*.8,tone,roof);}
+    else if(kind<.72)volume(x,z,w+1.2,cell*.33,d+1.2,tone,roof);
+    // On the roof: the water tank and the lift machine room, and sometimes a mast.
+    const top=roof+(kind<.4?cell*2:kind<.6?cell*3:kind<.72?cell*.33:0),grey=tone.map(v=>v*.82);
+    plain(x+w*(wr()-.5)*.4,top,z+d*(wr()-.5)*.3,3.2+wr()*2,2.2,2.6+wr()*1.5,grey);
+    if(wr()<.6)plain(x-w*.3,top,z+d*.2,2,1.4,2,grey);
+    if(wr()<.3)plain(x+w*.3,top,z-d*.2,.12,5+wr()*4,.12,[.35,.36,.37]);
   };
   for(let x=-430;x<430;){const w=15+wr()*13,d=15+wr()*6;block(x+w/2,a0-7-d/2,w,cell*Math.round(4+wr()*4),d);x+=w+3+wr()*6;}
   for(let row=0;row<4;row++){
@@ -409,6 +455,50 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
     const beam=new THREE.Mesh(new THREE.PlaneGeometry(3.4,9),beamMaterial);beam.rotation.set(-Math.PI/2,0,-Math.PI/2);beam.position.set(-6.4,.02,0);
     car.add(body,lights,beam);car.position.set(start,-.343,lane);car.userData={speed,start};far.add(car);return car;
   });
+
+  // Life on the water, scenery like the cars: surfers waiting past the break, sailboats and a fishing boat crossing far
+  // out, gulls circling over the shore. Surfers and gulls go home at dusk; the boats light a lamp on the mast.
+  const shaped=(g,rgb)=>{const t=tinted(g,rgb);t.deleteAttribute('uv');return t;};
+  const at=(g,x,y,z,rx=0,ry=0,rz=0)=>{g.rotateX(rx);g.rotateY(ry);g.rotateZ(rz);g.translate(x,y,z);return g;};
+  const seaPaint=new THREE.MeshStandardMaterial({roughness:.6,vertexColors:true,side:THREE.DoubleSide});
+  // A surfer sitting astride the board, facing out to sea (+z), legs in the water.
+  const surferGeometry=mergeGeometries([
+    shaped(at(new THREE.CapsuleGeometry(.24,1.5,3,8),0,0,0,Math.PI/2),[.93,.9,.82]).applyMatrix4(new THREE.Matrix4().makeScale(1,.28,1)),
+    shaped(at(new THREE.CapsuleGeometry(.17,.42,3,8),0,.52,-.05,-.12),[.06,.07,.08]),
+    shaped(at(new THREE.SphereGeometry(.13,10,8),0,1.02,0),[.36,.24,.17]),
+    shaped(at(new THREE.CapsuleGeometry(.06,.42,3,6),-.2,.5,.08,.5,0,.5),[.06,.07,.08]),
+    shaped(at(new THREE.CapsuleGeometry(.06,.42,3,6),.2,.5,.08,.5,0,-.5),[.06,.07,.08])
+  ].map(g=>g.index?g.toNonIndexed():g),false);
+  const surferSpots=[[-62,24],[-48,27],[-21,23.5],[14,26],[37,24.5],[58,28],[80,25]].map(([x,dz],i)=>({x,z:shore.sea+dz,yaw:(i%3-1)*.35,phase:i*1.7}));
+  const surfers=new THREE.InstancedMesh(surferGeometry,seaPaint,surferSpots.length);surfers.name='AERA_SURFERS';
+  // Sailboats (white hull, sail) and a small fishing boat (blue hull, cabin). One geometry each, moving slowly along the coast.
+  const hull=(len,beam,rgb)=>{const g=new THREE.CylinderGeometry(beam/2,beam*.3,len,10,1,false,0,Math.PI);g.rotateZ(Math.PI/2);g.rotateX(Math.PI);g.scale(1,.9,1);g.translate(0,.6,0);const deck=new THREE.BoxGeometry(len*.92,.08,beam*.96);deck.translate(0,.6,0);return mergeGeometries([shaped(g,rgb),shaped(deck,[.62,.5,.36])],false);};
+  const triangle=(points,rgb)=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(points,3));g.computeVertexNormals();return shaped(g,rgb);};
+  const sailboat=mergeGeometries([hull(7,2.2,[.92,.92,.9]),shaped(at(new THREE.BoxGeometry(.12,9,.12),.3,4.9,0),[.75,.76,.76]),triangle([.3,1.2,0,.3,9.2,0,-3.2,1.3,0],[.96,.95,.92]),triangle([.5,1.2,0,.4,7.6,0,3.3,1.1,0],[.9,.89,.86])].map(g=>g.index?g.toNonIndexed():g),false);
+  const fishing=mergeGeometries([hull(6,2,[.18,.33,.52]),shaped(at(new THREE.BoxGeometry(1.8,1.3,1.4),.6,1.2,0),[.92,.9,.86]),shaped(at(new THREE.BoxGeometry(.1,3.2,.1),-1.2,2.2,0),[.3,.3,.3])].map(g=>g.index?g.toNonIndexed():g),false);
+  const mastLight=new THREE.MeshBasicMaterial({color:'#fff1d0',toneMapped:false,transparent:true,opacity:0});
+  const boats=[[sailboat,shore.sea+120,1.1,-160],[sailboat,shore.sea+205,.7,90],[fishing,shore.sea+150,1.5,-20]].map(([geometry,z,speed,start],i)=>{
+    const boat=new THREE.Group(),lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),mastLight);lamp.position.set(geometry===fishing?-1.2:.3,geometry===fishing?3.9:9.5,0);
+    boat.add(new THREE.Mesh(geometry,seaPaint),lamp);boat.position.set(start,-.35,z);boat.userData={speed,start,phase:i*2.3};far.add(boat);return boat;
+  });
+  // Gulls: a body and two wings that flap in the vertex shader, each bird on its own beat.
+  const gullGeometry=new THREE.BufferGeometry();
+  gullGeometry.setAttribute('position',new THREE.Float32BufferAttribute([0,0,.35, 0,0,-.3, -1,.05,0, 0,0,.35, 1,.05,0, 0,0,-.3],3));gullGeometry.computeVertexNormals();
+  const gullMaterial=new THREE.MeshLambertMaterial({color:'#eceae4',side:THREE.DoubleSide});
+  gullMaterial.onBeforeCompile=shader=>{shader.uniforms.time=gust.time;
+    shader.vertexShader='uniform float time;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n      transformed.y+=abs(transformed.x)*.5*sin(time*7.+instanceMatrix[3].x*1.7+instanceMatrix[3].z);');};
+  gullMaterial.customProgramCacheKey=()=>'aera-gull';
+  const gullPaths=Array.from({length:9},(_,i)=>({cx:-70+i*18+random()*8,cz:shore.sea-6+random()*16,r:9+random()*14,y:5+random()*6,w:(random()<.5?-1:1)*(.18+random()*.12),a:random()*Math.PI*2}));
+  const gulls=new THREE.InstancedMesh(gullGeometry,gullMaterial,gullPaths.length);gulls.name='AERA_GULLS';
+  const pose=new THREE.Object3D();
+  function moveLife(t){
+    surferSpots.forEach((p,i)=>{const bob=Math.sin(t*1.3+p.phase);pose.position.set(p.x+Math.sin(t*.07+p.phase)*.8,-.28+.06*bob,p.z);pose.rotation.set(.05*Math.sin(t*1.1+p.phase),p.yaw,.04*bob);pose.scale.setScalar(1);pose.updateMatrix();surfers.setMatrixAt(i,pose.matrix);});
+    surfers.instanceMatrix.needsUpdate=true;
+    for(const boat of boats){const u=boat.userData;boat.position.x=320-((320-u.start+t*u.speed)%640);boat.position.y=-.35+.12*Math.sin(t*.9+u.phase);boat.rotation.set(.03*Math.sin(t*.7+u.phase),Math.PI,.04*Math.sin(t*.8+u.phase));}
+    gullPaths.forEach((g,i)=>{const a=g.a+t*g.w;pose.position.set(g.cx+Math.cos(a)*g.r,g.y+Math.sin(t*.4+i)*1.2,g.cz+Math.sin(a)*g.r*.6);pose.rotation.set(0,-a+(g.w>0?0:Math.PI),Math.sign(g.w)*.25);pose.scale.setScalar(1);pose.updateMatrix();gulls.setMatrixAt(i,pose.matrix);});
+    gulls.instanceMatrix.needsUpdate=true;
+  }
+  moveLife(0);far.add(surfers,gulls);
 
   far.traverse(o=>{if(o.isMesh||o.isPoints){o.castShadow=false;o.receiveShadow=false;o.frustumCulled=false;}});
 
@@ -462,6 +552,7 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
     last=now;const t=now/1000;
     ocean.uniforms.time.value=t;gust.time.value=t;rainUniforms.time.value=t;
     for(const car of cars)car.position.x=260-((260-car.userData.start+t*car.userData.speed)%520);
+    moveLife(t);
     return true;
   }
   // The floor-plan cut shows the pavilion alone: trees and palms would be sliced by the clipping planes.
@@ -469,8 +560,12 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   const lampOff=new THREE.Color('#6b7275'),lampOn=new THREE.Color('#ffd9a8');
   function setDaylight(s){
     lampHead.color.lerpColors(lampOff,lampOn,s.lamps);pools.opacity=.2*s.lamps;beamMaterial.opacity=.28*s.lamps;
-    city.material.emissiveIntensity=.5*s.windows;hillLights.material.opacity=.75*s.nightLights;hillLights.visible=s.nightLights>.02;
+    city.material.emissiveIntensity=.85*s.windows;
+    // The pale walls would glow grey after dark under the sky light; at night they sink back and the windows carry them.
+    city.material.color.setScalar(.38+.62*Math.min(1,s.bright/.7));hillLights.material.opacity=.75*s.nightLights;hillLights.visible=s.nightLights>.02;
     ocean.setDaylight(s);silhouettes.material.color.setRGB(...s.hills);
+    // Surfers and gulls are out by day only, and not in the rain; boat lamps come on with the street lamps.
+    surfers.visible=s.bright>.12&&!(s.rain>.5);gulls.visible=s.bright>.2&&!s.rain;mastLight.opacity=s.lamps;
     // Weather (see weather.js): wind in the plants and on the sea, rain falling, the ground wet.
     const wind=s.wind??.25,wet=s.rain?Math.min(1,.45+s.rain):0;
     gust.wind.value=wind;gust.windDir.value.copy(downwind(s.windFrom??160));rainUniforms.drift.value.copy(gust.windDir.value).multiplyScalar(.6+5.5*wind);
