@@ -495,10 +495,35 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     controls.target.copy(camera.position).add(direction);camera.lookAt(controls.target);dirty=true;
   }
   function travel(position,target,{instant=false,fov=36,duration=1500}={}){
-    moves.clear();closeOpening();
+    moves.clear();closeOpening();drift=null;
     if(instant||motion.matches){transition=null;camera.position.copy(position);controls.target.copy(target);camera.fov=fov;camera.updateProjectionMatrix();camera.lookAt(target);syncLook();if(viewMode==='orbit')controls.update();}
     else transition={from:camera.position.clone(),fromTarget:controls.target.clone(),position,target,start:performance.now(),duration,fromFov:camera.fov,fov};
     dirty=true;emitNavigation(true);
+  }
+  // NAYRA presenting an agent: the camera frames where that person is in the building, from outside, and drifts slowly
+  // around them while she talks. It never goes inside a room. A drag, a zoom or any other camera move ends the drift.
+  const agentZone={ARI:'control',MAYA:'think',NOA:'create',JOHN:'create',LEO:'build',NINA:'grow'};
+  let drift=null;const driftSpherical=new THREE.Spherical();
+  function showAgent(name,{orbit=true}={}){
+    const p=team.anchors()[name];if(!p||!agentZone[name])return false;
+    viewMode='orbit';floorMode='all';controls.enabled=true;controls.minDistance=8;controls.maxDistance=110;clearClipping();markZone(agentZone[name]);frameOffset();
+    // Wide enough to read where the person is in the building; low enough to look in under the slab and balcony above.
+    const target=new THREE.Vector3(p[0]*.82,p[1]-.7,p[2]+.6),floorLevel=p[1]<4?0:p[1]<8.5?1:2;
+    const theta=THREE.MathUtils.clamp(.3+.03*p[0],-.45,.62),phi=[1.39,1.37,1.45][floorLevel],radius=width<=900?(width<550?36:31):26;
+    driftSpherical.set(radius,phi,theta);
+    const position=new THREE.Vector3().setFromSpherical(driftSpherical).add(target);
+    travel(position,target,{duration:1700});
+    if(orbit&&!motion.matches)drift={target,radius,phi,theta,phase:0,speed:0,on:true,start:performance.now()+1700};
+    return true;
+  }
+  function settleDrift(){if(drift)drift.on=false;}
+  function tickDrift(now,delta){
+    if(!drift||transition||now<drift.start)return false;
+    const dt=Math.min(.05,delta/1000);drift.speed+=((drift.on?1:0)-drift.speed)*Math.min(1,dt*1.4);
+    if(!drift.on&&drift.speed<.004){drift=null;return false;}
+    drift.phase+=dt*.21*drift.speed;
+    driftSpherical.set(drift.radius,drift.phi+.05*Math.sin(drift.phase*.7),drift.theta+.42*Math.sin(drift.phase));
+    camera.position.setFromSpherical(driftSpherical).add(drift.target);camera.lookAt(controls.target);return true;
   }
   function focus(zone,instant=false){
     if(!views[zone])return;
@@ -527,7 +552,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     }
     emitNavigation(true);
   }
-  controls.addEventListener('start',()=>{transition=null;closeOpening();dirty=true;onInteraction();});
+  controls.addEventListener('start',()=>{transition=null;drift=null;closeOpening();dirty=true;onInteraction();});
   controls.addEventListener('change',()=>{dirty=true;});
   const labels=[],layer=document.querySelector('#scene-labels');
   const labelCoords={think:[-6.4,7,5.95],create:[6.3,7,5.95],build:[-6.4,2.8,5.95],grow:[6.3,2.8,5.95],control:[.5,11.3,5.95]};
@@ -597,7 +622,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   // Room volumes let the architecture itself be selected, not just the labels.
   const roomVolumes=Object.fromEntries(Object.entries(roomSpecs).map(([zone,r])=>{const [a,b,c,d]=r.bounds,y=floorSpecs[r.floor].base;return [zone,new THREE.Box3(new THREE.Vector3(a,y+.25,c),new THREE.Vector3(b,y+3.5,d))];}));
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let pointerStart=null;
-  function cancelTravel(){if(transition){transition=null;closeOpening();syncLook();}onInteraction();}
+  function cancelTravel(){drift=null;if(transition){transition=null;closeOpening();syncLook();}onInteraction();}
   renderer.domElement.addEventListener('pointerdown',e=>{
     pointerStart={x:e.clientX,y:e.clientY};
     if(viewMode==='walk'){cancelTravel();drag={x:e.clientX,y:e.clientY,id:e.pointerId};renderer.domElement.setPointerCapture(e.pointerId);}
@@ -643,6 +668,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
       if(t===1){transition=null;closeOpening();syncLook();}
     }
     if(lightLevel!==lightTarget){const step=Math.min(1,Math.max(0,delta)/1400);lightLevel=lightTarget>lightLevel?Math.min(lightTarget,lightLevel+step):Math.max(lightTarget,lightLevel-step);applyLights();moving=true;}
+    if(tickDrift(now,delta))moving=true;
     if(viewMode==='orbit')controls.update();
     const agentsChanged=team.update(now,dirty||moving),shoreChanged=leblon.update(now);
     if(workflow&&curve&&!motion.matches){flowDot.position.copy(curve.getPoint((now%2600)/2600));moving=true;}
@@ -670,7 +696,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();thumbnailsReady=true;renderThumbnails();requestAnimationFrame(frame);
   const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
   return {
-    focus,enter,setFloor,setWorkflow,setStations,setStationStates,setCharacterStates,
+    focus,enter,setFloor,showAgent,settleDrift,setWorkflow,setStations,setStationStates,setCharacterStates,
     selectStation(id){selectedStation=id||'';dirty=true;},
     setAmbient(value){return team.setAmbient(value);},
     setLights,lights(){return lightTarget===1;},setHour,
@@ -684,7 +710,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     setPaused(value){paused=value;moves.clear();dirty=true;},
     diagnostics(){
       const sorted=[...samples].sort((a,b)=>a-b),mean=samples.reduce((a,b)=>a+b,0)/(samples.length||1);
-      return {three:THREE.REVISION,viewMode,floor:floorMode,currentZone,exploring,transitioning:!!transition,quality:lowQuality?'leve':'alta',dpr:renderer.getPixelRatio(),viewport:[width,height],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,sampledFrames:samples.length,fps:mean?Math.round(1000/mean*10)/10:null,p95FrameMs:sorted.length?Math.round(sorted[Math.floor(sorted.length*.95)]*10)/10:null,meanSubmitMs:slowSamples.length?+(slowSamples.reduce((a,b)=>a+b,0)/slowSamples.length).toFixed(2):null,gpu:debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),camera:camera.position.toArray(),target:controls.target.toArray(),yaw,pitch,clippingPlanes:renderer.clippingPlanes.length,lights:lightTarget===1,hour:+sceneHour.toFixed(2),agents:team.diagnostics(),webgl:gl.getParameter(gl.VERSION)};
+      return {three:THREE.REVISION,viewMode,floor:floorMode,currentZone,exploring,transitioning:!!transition,quality:lowQuality?'leve':'alta',dpr:renderer.getPixelRatio(),viewport:[width,height],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,sampledFrames:samples.length,fps:mean?Math.round(1000/mean*10)/10:null,p95FrameMs:sorted.length?Math.round(sorted[Math.floor(sorted.length*.95)]*10)/10:null,meanSubmitMs:slowSamples.length?+(slowSamples.reduce((a,b)=>a+b,0)/slowSamples.length).toFixed(2):null,gpu:debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),camera:camera.position.toArray(),target:controls.target.toArray(),yaw,pitch,clippingPlanes:renderer.clippingPlanes.length,lights:lightTarget===1,drift:!!drift,hour:+sceneHour.toFixed(2),agents:team.diagnostics(),webgl:gl.getParameter(gl.VERSION)};
     }
   };
 }

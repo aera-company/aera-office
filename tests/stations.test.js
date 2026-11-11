@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {layoutStations,pickWaypoint,floorOfY,roomSpecs,routeTiming,routeProgress,WALK_SPEED} from '../stations.js';
-import {lightsCommand,agentsMentioned} from '../commands.js';
+import {lightsCommand,agentsMentioned,agentMentions,enterCommand,leaveCommand} from '../commands.js';
 import {isWalkable,floorSpecs} from '../navigation.js';
 
 const registry=JSON.parse(readFileSync(new URL('../scripts/office/capabilities.json',import.meta.url),'utf8'));
@@ -76,4 +76,16 @@ test('Hora do dia: postes e janelas apagados de dia, acesos à noite, e sem salt
   assert(sunDirection(12)[1]>sunDirection(8)[1]&&sunDirection(12)[1]>sunDirection(16)[1]);
   assert(sunDirection(7)[0]>0&&sunDirection(17)[0]<0);
   assert.equal(daylight(35).hour,11);assert.equal(hourOf(new Date(2026,10,11,11,30,0)),11.5);
+});
+
+test('NAYRA apresentando a equipe: agentes na ordem da fala, entrar e sair da sala só quando pedido',()=>{
+  const m=agentMentions('Começo pela MAYA, que cuida da estratégia. Depois vem o NOA no texto e, por fim, a NINA.');
+  assert.deepEqual(m.map(x=>x.name),['MAYA','NOA','NINA']);assert(m[0].at<m[1].at&&m[1].at<m[2].at&&m[2].at<1);
+  assert.deepEqual(agentMentions('Nada de agentes aqui.'),[]);
+  assert.equal(enterCommand('NAYRA, entra na sala da MAYA'),'think');
+  assert.equal(enterCommand('me leva para a sala do Leo'),'build');
+  assert.equal(enterCommand('quero ver por dentro'),'current');
+  assert.equal(enterCommand('entra na sala'),'current');
+  for(const t of ['Não precisa entrar na sala','Como está a entrega da MAYA?','Me mostra a MAYA','A NINA entrou em contato'])assert.equal(enterCommand(t),null,t);
+  assert.equal(leaveCommand('sai da sala, por favor'),true);assert.equal(leaveCommand('volta para fora do prédio'),true);assert.equal(leaveCommand('a MAYA volta amanhã'),false);
 });

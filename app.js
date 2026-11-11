@@ -126,6 +126,16 @@ function selectZone(zone,{instant=false,keepTour=false,keepWorkflow=false}={}){
   if(!keepTour&&!keepWorkflow)history.replaceState(null,'',zone==='all'?'#explore':interior?`#inside-${zone}`:`#${zone}`);
 }
 function explore(){closeBrief();interior=false;selectZone('all');}
+// NAYRA presenting an agent: the card shows that person and the camera frames them from outside. She never takes the
+// visitor into a room on her own; if they are already walking inside, only the card changes.
+function presentAgent(name){
+  const zone=zoneOfAgent[name];if(!office||visualMode||!zone)return;
+  stopTour();stopFollowingWork();
+  if(zone==='create'&&people[name])createPerson=name;
+  selected=zone;syncNav();updateProfile(zone);office.setExploring(true);
+  if(interior)return;
+  setMode('focus');office.showAgent(name);history.replaceState(null,'',`#${zone}`);
+}
 function enterRoom(zone=selected){
   if(!office||visualMode)return;stopTour();stopFollowingWork();closeBrief();
   const next=roomSpecs[zone]?zone:'control';selected=next;syncNav();updateProfile(next);interior=true;setMode('walk');office.setExploring(true);office.enter(next,reduceMotion.matches);history.replaceState(null,'',`#inside-${next}`);
@@ -266,6 +276,10 @@ const nayra=initNayra({api:operations.api,openJob(id){stopTour();if(!operations.
 // NAYRA by voice (C49 to C60): "Oi, NAYRA", presentation mode and the live conversation. In presentation the orb button opens the conversation.
 const voz=initNayraVoz({api:operations.api,briefing:()=>nayra.open(),closeBriefing:()=>nayra.close(),
   selectZone(zone){if(!office||visualMode)return;selectZone(zone);},
+  presentAgent(name){presentAgent(name);},
+  enterRoom(zone){if(!office||visualMode)return false;enterRoom(zone==='current'?(selected!=='all'?selected:'control'):zone);return true;},
+  leaveRoom(){if(!office||visualMode||!interior)return false;explore();return true;},
+  settle(){office?.settleDrift();},
   openJob(id){stopTour();if(!operations.isOpen())operations.open();operations.selectJob(id);},
   onPresentation(){operations.refresh(false);syncCaps();nayra.refreshCount();if(operations.isOpen())panel?.renderSummary();}});
 $('#nayra-call').onclick=()=>voz.presenting?voz.converse():nayra.open();

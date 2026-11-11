@@ -1,9 +1,9 @@
 import {VITRINE} from './vitrine.js';
-import {lightsCommand,agentsMentioned} from './commands.js';
+import {lightsCommand,agentMentions,enterCommand,leaveCommand} from './commands.js';
 // NAYRA by voice (C49 to C60): presentation mode, the "Oi, NAYRA" listener and the live conversation with the ElevenLabs agent.
 // The listener is the browser's speech recognition (audio goes to Google in Chrome, Apple in Safari) and only waits for phrases.
 // The conversation itself runs on the ElevenLabs agent; credits are spent only while it is open.
-export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJob,onPresentation=()=>{}}) {
+export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,presentAgent=()=>{},enterRoom=()=>false,leaveRoom=()=>false,settle=()=>{},openJob,onPresentation=()=>{}}) {
   // Safari (and Chrome before any click) keeps audio contexts suspended unless started by a click or key.
   // The conversation starts by voice, so every audio context the page creates is tracked and resumed on the next interaction.
   const contexts=new Set();
@@ -105,7 +105,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
   async function converse(question='',preset=null){
     if(convo||starting)return;
     closeBriefing();
-    starting=true;stopListening();farewell=false;lastZone='';agentSpoke=false;
+    starting=true;stopListening();farewell=false;lastZone='';lastAgent='';agentSpoke=false;
     live().hidden=false;document.body.classList.add('nayra-live-on');caption('nayra','Conectando…');note('');$('#nayra-live-card').replaceChildren();
     let session=null;
     try{
@@ -131,16 +131,16 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
         },
         onError(message,context){report('erro',message+' '+(context?String(context?.message||JSON.stringify(context)).slice(0,300):''));note('Falha na conversa: '+message);},
         onModeChange({mode}){
-          $('#nayra-live-orb').classList.toggle('speaking',mode==='speaking');present(undefined,mode==='speaking');
+          $('#nayra-live-orb').classList.toggle('speaking',mode==='speaking');speaking(mode==='speaking');
           if(mode==='speaking')clearTimeout(silenceTimer);
           else if(farewell)setTimeout(()=>endConversation('despedida'),900);
           else armSilence();
         },
         onMessage(m){
           const role=m.role||(m.source==='ai'?'agent':'user');
-          if(role==='user'){caption('cliente',m.message);armSilence();lights(m.message);const t=norm(m.message);if(NAME.test(t)&&/\b(obrigad[oa]|tchau|ate mais|encerra|pode encerrar)\b/.test(t))farewell=true;}
+          if(role==='user'){caption('cliente',m.message);armSilence();lights(m.message);rooms(m.message);const t=norm(m.message);if(NAME.test(t)&&/\b(obrigad[oa]|tchau|ate mais|encerra|pode encerrar)\b/.test(t))farewell=true;}
           // Expressive voice tags such as [warm] guide the voice; they are not shown on screen.
-          else{const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();caption('nayra',said);react(said);present(agentsMentioned(said));if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
+          else{const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();caption('nayra',said);react(said);walkThrough(said);if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
         }
       });
       brief(convo);
@@ -167,7 +167,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
   }
   function finish(){
     convo=null;clearTimeout(silenceTimer);clearTimeout(maxTimer);cancelAnimationFrame(raf);
-    live().hidden=true;document.body.classList.remove('nayra-live-on');$('#nayra-live-orb').classList.remove('speaking');present([],false);
+    live().hidden=true;document.body.classList.remove('nayra-live-on');$('#nayra-live-orb').classList.remove('speaking');for(const t of followTimers)clearTimeout(t);followTimers=[];lastAgent='';present([],false);settle();
     indicator();setTimeout(startListening,600);
   }
 
@@ -178,14 +178,32 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
     // C62: outside presentation it is Tiago talking, not a client; the agent is told so at the start. C83: she calls him Chefe.
     if(!presenting&&!VITRINE){try{conversation.sendContextualUpdate('Quem está falando agora é o próprio Tiago, fundador da AERA, no uso do dia a dia, não um cliente em demonstração. Quando falar com ele, chame-o de Chefe, nunca de Tiago, e vá direto ao ponto.');}catch{}}
     // The 3D office obeys one spoken command; she is told so, to confirm instead of saying she cannot do it.
-    try{conversation.sendContextualUpdate('O escritório 3D na tela obedece a um comando de voz: quando a pessoa pedir para apagar ou acender as luzes do escritório, o próprio office faz isso ao ouvir o pedido. Confirme em uma frase curta e não diga que não consegue.');}catch{}
+    try{conversation.sendContextualUpdate('O escritório 3D na tela obedece a comandos de voz: quando a pessoa pedir para apagar ou acender as luzes do escritório, o próprio office faz isso ao ouvir o pedido. Confirme em uma frase curta e não diga que não consegue.');}catch{}
+    try{conversation.sendContextualUpdate('Quando você fala de um agente pelo nome (ARI, MAYA, NOA, JOHN, LEO ou NINA), a tela mostra o card dele e a câmera vai até onde ele está no prédio, sem entrar na sala. Se a pessoa pedir para entrar numa sala, o office entra sozinho; se pedir para sair, volta para fora. Confirme em uma frase curta. Ao apresentar a equipe, fale de um agente por vez, chamando cada um pelo nome.');}catch{}
   }
   // Whose face moves on the room card: the agents named in what NAYRA is saying, and only while she is speaking.
-  let presentedNames=[],nayraSpeaking=false;
+  let presentedNames=[],nayraSpeaking=false,followTimers=[],lastAgent='';
   function present(names,isSpeaking){
     if(names)presentedNames=names;if(isSpeaking!==undefined)nayraSpeaking=isSpeaking;
     window.dispatchEvent(new CustomEvent('aera:agent-presented',{detail:{names:presentedNames,speaking:nayraSpeaking}}));
   }
+  // Her whole reply arrives at once; the office walks through the agents she names in the order and at roughly the pace
+  // she says them (about 3 words a second, counted from when her voice started). Each one gets the card, the camera
+  // and, while she speaks, the face.
+  function walkThrough(said,conversation=convo){
+    for(const t of followTimers)clearTimeout(t);followTimers=[];
+    const mentions=agentMentions(said);if(!mentions.length)return;
+    const seconds=String(said).trim().split(/\s+/).length/3,already=nayraSpeaking&&speakingSince?performance.now()-speakingSince:0;
+    for(const {name,at} of mentions)followTimers.push(setTimeout(()=>{if(conversation&&conversation!==convo&&conversation!==testConvo)return;if(name!==lastAgent){lastAgent=name;presentAgent(name);}present([name]);},Math.max(0,at*seconds*1000-already-200)));
+  }
+  let speakingSince=0;
+  function speaking(on){if(on&&!nayraSpeaking)speakingSince=performance.now();present(undefined,on);if(!on)settle();}
+  function rooms(text,conversation=convo){
+    const zone=enterCommand(text);
+    if(zone&&enterRoom(zone)){try{conversation?.sendContextualUpdate('A pessoa pediu e a tela entrou na sala.');}catch{}return;}
+    if(leaveCommand(text)&&leaveRoom()){try{conversation?.sendContextualUpdate('A pessoa pediu e a tela voltou para a vista de fora do prédio.');}catch{}}
+  }
+  let testConvo=null;
   let lightsOff=false;
   // "Apaga as luzes": the request itself is the event. The scene answers whether it obeyed, and only then is NAYRA told.
   function lights(text,conversation=convo){
@@ -237,15 +255,18 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,openJ
     const first=next();
     const c=await Conversation.startSession({...(session.signed_url?{signedUrl:session.signed_url}:{agentId:session.agent_id}),textOnly,connectionType:'websocket',
       dynamicVariables:{estado_escritorio:context.text,cliente:context.client},
-      onMessage(m){const role=m.role||(m.source==='ai'?'agent':'user');log.push({role,text:m.message});if(role!=='user'){react(m.message);log.push({zone:lastZone,card:$('#nayra-live-card').dataset.job||''});turn?.('ok');}},
+      onMessage(m){const role=m.role||(m.source==='ai'?'agent':'user');log.push({role,text:m.message,at:Math.round(performance.now())});if(role!=='user'){const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();react(said);walkThrough(said,testConvo);log.push({zone:lastZone,card:$('#nayra-live-card').dataset.job||''});if(textOnly)turn?.('ok');}},
+      onModeChange({mode}){log.push({mode,at:Math.round(performance.now())});speaking(mode==='speaking');if(mode==='listening'&&!textOnly)turn?.('ok');},
       onConnect(p){log.push({connected:p?.conversationId||true});},
       onDisconnect(d){log.push({disconnected:JSON.parse(JSON.stringify(d||{}))});turn?.('closed');},
       onError(message,context){log.push({error:message,context:context?String(context?.message||JSON.stringify(context)).slice(0,300):''});turn?.('error');}});
+    testConvo=c;lastAgent='';
     if(!textOnly){try{c.setMicMuted(true);}catch{}}
     await first;brief(c);
-    for(const q of questions){const r=next();lights(q,c);c.sendUserMessage(q);if(await r!=='ok')break;}
+    for(const q of questions){const r=next();lights(q,c);rooms(q,c);c.sendUserMessage(q);if(await r!=='ok')break;}
+    testConvo=null;speaking(false);
     try{await c.endSession();}catch{}
     return log;
   }
-  return {hear,converse,publicTalk,follow,textTest,endConversation,setPresentation,get presenting(){return presenting;},get listening(){return listening;},get talking(){return !!convo;}};
+  return {hear,converse,publicTalk,follow,walkThrough:said=>walkThrough(said,null),speaking,textTest,endConversation,setPresentation,get presenting(){return presenting;},get listening(){return listening;},get talking(){return !!convo;}};
 }
