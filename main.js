@@ -7,6 +7,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {createSky,buildLeblon,HAZE,toWorld} from './leblon.js';
+import {daylight,hourOf} from './daylight.js';
 
 // Real procedural architecture. No AI services, panorama geometry or remote assets.
 export async function createOffice({selectZone,onFailure,onQuality,onNavigation=()=>{},onInteraction=()=>{},onStation=()=>{}}) {
@@ -55,7 +56,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   scene.environment = environment.texture;
   scene.environmentIntensity = .34;
   room.dispose();pmrem.dispose();
-  scene.add(new THREE.HemisphereLight('#b2c9df','#44331f',.72));
+  const hemisphere=new THREE.HemisphereLight('#b2c9df','#44331f',.72);scene.add(hemisphere);
   const moon = new THREE.DirectionalLight('#a9c3dc',.95);
   moon.position.set(-13,26,17);moon.castShadow=true;
   moon.shadow.mapSize.set(2048,2048);
@@ -396,14 +397,35 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   };
   let transition=null,currentZone='all',dirty=true,viewMode='orbit',floorMode='all',exploring=false;
   // Office lights: on by default; they only change on a real request (NAYRA's voice command or the scene API).
-  const warmFull=warm.color.clone(),warmDimFull=warmDim.color.clone();let lightLevel=1,lightTarget=1;
+  const warmFull=warm.color.clone(),warmDimFull=warmDim.color.clone();let lightLevel=1,lightTarget=1,interiorDay=1;
   function applyLights(){
-    for(const light of interiorLights)light.intensity=light.userData.full*(.03+.97*lightLevel);
+    for(const light of interiorLights)light.intensity=light.userData.full*(.03+.97*lightLevel)*interiorDay;
     warm.color.copy(warmFull).multiplyScalar(.05+.95*lightLevel);warmDim.color.copy(warmDimFull).multiplyScalar(.12+.88*lightLevel);
     oak.emissiveIntensity=.06*lightLevel;dirty=true;
   }
   function setLights(on){lightTarget=on?1:0;if(motion.matches){lightLevel=lightTarget;applyLights();}dirty=true;return lightTarget===1;}
   window.addEventListener('aera:lights',e=>{if(failed||!e.detail)return;setLights(!!e.detail.on);e.detail.handled=true;});
+  // The scene follows the viewer's clock: sky, sun, shadows, street lamps and lit windows (see daylight.js).
+  // `?hora=11` previews a fixed hour; without it the real time is used and refreshed every minute.
+  const poolBase=pool.color.clone(),moonPosition=moon.position.clone(),lanternOff=new THREE.Color('#6b7275'),lanternOn=lantern.color.clone(),sunPosition=new THREE.Vector3();
+  const requested=parseFloat(new URLSearchParams(location.search).get('hora'));
+  let fixedHour=Number.isFinite(requested)?requested:null,sceneHour=0;
+  function applyDaylight(){
+    sceneHour=fixedHour??hourOf(new Date());
+    const s=daylight(sceneHour),sun=sky.setDaylight(s);
+    scene.fog.color.set(s.haze);scene.background.set(s.haze);renderer.toneMappingExposure=s.exposure;
+    hemisphere.color.set(s.hemiSky);hemisphere.groundColor.set(s.hemiGround);hemisphere.intensity=s.hemi;
+    // The shadow light is the sun by day and a cool sky light after dark; it never drops so low that shadows run off the lot.
+    sunPosition.set(sun.x,Math.max(sun.y,.3),sun.z).normalize().multiplyScalar(42);
+    moon.color.set(s.keyColor);moon.intensity=s.key;moon.position.lerpVectors(moonPosition,sunPosition,s.sunKey);
+    sunset.intensity=s.warm;rim.intensity=s.rim;
+    interiorDay=s.interior;lantern.color.lerpColors(lanternOff,lanternOn,s.lamps);
+    pool.color.set(s.sea).lerp(poolBase,.35);
+    leblon.setDaylight(s);applyLights();renderer.shadowMap.needsUpdate=true;dirty=true;
+  }
+  function setHour(hour){fixedHour=Number.isFinite(hour)?hour:null;applyDaylight();return sceneHour;}
+  applyDaylight();setInterval(()=>{if(fixedHour===null&&!document.hidden)applyDaylight();},60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&fixedHour===null)applyDaylight();});
   let yaw=0,pitch=0,drag=null,lastNavigation=0,lastSampleAt=0,opening=false,skipIntro=null;
   function closeOpening(){opening=false;if(skipIntro){skipIntro.remove();skipIntro=null;}dirty=true;}
   const motion=matchMedia('(prefers-reduced-motion: reduce)');
@@ -626,7 +648,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     focus,enter,setFloor,setWorkflow,setStations,setStationStates,setCharacterStates,
     selectStation(id){selectedStation=id||'';dirty=true;},
     setAmbient(value){return team.setAmbient(value);},
-    setLights,lights(){return lightTarget===1;},
+    setLights,lights(){return lightTarget===1;},setHour,
     setExploring(value){exploring=value;frameOffset();dirty=true;},
     move(action,active){if(viewMode!=='walk')return;cancelTravel();if(active)moves.add(action);else moves.delete(action);},
     stopMoving(){moves.clear();},
@@ -637,7 +659,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     setPaused(value){paused=value;moves.clear();dirty=true;},
     diagnostics(){
       const sorted=[...samples].sort((a,b)=>a-b),mean=samples.reduce((a,b)=>a+b,0)/(samples.length||1);
-      return {three:THREE.REVISION,viewMode,floor:floorMode,currentZone,exploring,transitioning:!!transition,quality:lowQuality?'leve':'alta',dpr:renderer.getPixelRatio(),viewport:[width,height],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,sampledFrames:samples.length,fps:mean?Math.round(1000/mean*10)/10:null,p95FrameMs:sorted.length?Math.round(sorted[Math.floor(sorted.length*.95)]*10)/10:null,meanSubmitMs:slowSamples.length?+(slowSamples.reduce((a,b)=>a+b,0)/slowSamples.length).toFixed(2):null,gpu:debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),camera:camera.position.toArray(),target:controls.target.toArray(),yaw,pitch,clippingPlanes:renderer.clippingPlanes.length,lights:lightTarget===1,agents:team.diagnostics(),webgl:gl.getParameter(gl.VERSION)};
+      return {three:THREE.REVISION,viewMode,floor:floorMode,currentZone,exploring,transitioning:!!transition,quality:lowQuality?'leve':'alta',dpr:renderer.getPixelRatio(),viewport:[width,height],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,sampledFrames:samples.length,fps:mean?Math.round(1000/mean*10)/10:null,p95FrameMs:sorted.length?Math.round(sorted[Math.floor(sorted.length*.95)]*10)/10:null,meanSubmitMs:slowSamples.length?+(slowSamples.reduce((a,b)=>a+b,0)/slowSamples.length).toFixed(2):null,gpu:debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER),camera:camera.position.toArray(),target:controls.target.toArray(),yaw,pitch,clippingPlanes:renderer.clippingPlanes.length,lights:lightTarget===1,hour:+sceneHour.toFixed(2),agents:team.diagnostics(),webgl:gl.getParameter(gl.VERSION)};
     }
   };
 }

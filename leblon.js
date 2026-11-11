@@ -18,17 +18,18 @@ export const sunDirection=SUN.clone();
 export function createSky(){
   const material=new THREE.ShaderMaterial({
     side:THREE.BackSide,depthWrite:false,fog:false,
-    uniforms:{zenith:{value:new THREE.Color('#0b1826')},mid:{value:new THREE.Color('#3a5670')},haze:{value:new THREE.Color(HAZE)},glow:{value:new THREE.Color('#e2a983')},rose:{value:new THREE.Color('#7c7890')},deep:{value:new THREE.Color('#0c151c')},sun:{value:SUN}},
+    uniforms:{zenith:{value:new THREE.Color('#0b1826')},mid:{value:new THREE.Color('#3a5670')},haze:{value:new THREE.Color(HAZE)},glow:{value:new THREE.Color('#e2a983')},rose:{value:new THREE.Color('#7c7890')},deep:{value:new THREE.Color('#0c151c')},sun:{value:SUN.clone()},gains:{value:new THREE.Vector3(.82,.42,.22)}},
     vertexShader:'varying vec3 vDir;void main(){vDir=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-    fragmentShader:`uniform vec3 zenith,mid,haze,glow,rose,deep,sun;varying vec3 vDir;
+    fragmentShader:`uniform vec3 zenith,mid,haze,glow,rose,deep,sun,gains;varying vec3 vDir;
       void main(){
         vec3 d=normalize(vDir);float h=d.y;
         vec3 c=mix(haze,mid,smoothstep(0.,.2,h));c=mix(c,zenith,smoothstep(.12,.7,h));
         float az=max(dot(normalize(vec3(d.x,0.,d.z)),normalize(vec3(sun.x,0.,sun.z))),0.);
         float low=exp(-pow(max(h,0.)/.085,1.25)),high=exp(-pow(max(h,0.)/.24,1.4));
-        c=mix(c,rose,high*pow(az,1.6)*.42);
-        c=mix(c,glow,low*pow(az,3.)*.82);
-        c+=glow*pow(max(dot(d,sun),0.),40.)*.22;
+        c=mix(c,rose,high*pow(az,1.6)*gains.y);
+        c=mix(c,glow,low*pow(az,3.)*gains.x);
+        float toSun=max(dot(d,sun),0.);
+        c+=glow*(pow(toSun,40.)*.27+pow(toSun,900.)*1.4)*gains.z;
         c=mix(deep,c,smoothstep(-.45,-.01,h));
         gl_FragColor=vec4(c,1.);
         #include <tonemapping_fragment>
@@ -36,7 +37,14 @@ export function createSky(){
       }`
   });
   const mesh=new THREE.Mesh(new THREE.SphereGeometry(760,48,24),material);mesh.name='AERA_SKY';mesh.frustumCulled=false;mesh.renderOrder=-10;
-  return {mesh,sun:SUN};
+  // Sky for a moment of the day (see daylight.js); returns the sun direction in world coordinates.
+  function setDaylight(s){
+    const u=material.uniforms,[x,z]=toWorld(s.sun[0],s.sun[2]);
+    for(const key of ['zenith','mid','haze','glow','rose'])u[key].value.set(s[key]);
+    u.gains.value.set(s.glowLow,s.glowHigh,s.disc);u.sun.value.set(x,s.sun[1],z).normalize();
+    return u.sun.value;
+  }
+  return {mesh,sun:SUN,setDaylight};
 }
 
 function waveNormals(size=128){
@@ -235,7 +243,7 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
   for(let i=0;i<120;i++){const a=Math.PI*(-.42+wr()*.62),t=.05+wr()*wr()*.5,r=150*Math.pow(1-Math.pow(t,1.6),.62)+.6;sparks.push(-610+Math.cos(a)*r*1.3,-.4+34*t,30+Math.sin(a)*r*1.5);}
   for(let i=0;i<70;i++)sparks.push(-420+wr()*900,2+wr()*26,-470-wr()*30);
   const sparkGeometry=new THREE.BufferGeometry();sparkGeometry.setAttribute('position',new THREE.Float32BufferAttribute(sparks,3));
-  far.add(new THREE.Points(sparkGeometry,new THREE.PointsMaterial({color:'#ffc890',size:1.5,sizeAttenuation:false,fog:false,transparent:true,opacity:.75,depthWrite:false})));
+  const hillLights=new THREE.Points(sparkGeometry,new THREE.PointsMaterial({color:'#ffc890',size:1.5,sizeAttenuation:false,fog:false,transparent:true,opacity:.75,depthWrite:false}));far.add(hillLights);
 
   // Two slow cars on the avenue: scenery, not a system state.
   const carPaint=new THREE.MeshStandardMaterial({roughness:.35,metalness:.5,vertexColors:true}),carLights=new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false});
@@ -263,5 +271,12 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
     return true;
   }
   // The floor-plan cut shows the pavilion alone: trees and palms would be sliced by the clipping planes.
-  return {update,setLow(value){low=!!value;},setVisible(value){far.visible=!!value;}};
+  // Street lamps, lit windows, hillside lights, sea and headland follow the moment of the day (see daylight.js).
+  const lampOff=new THREE.Color('#6b7275'),lampOn=new THREE.Color('#ffd9a8');
+  function setDaylight(s){
+    lampHead.color.lerpColors(lampOff,lampOn,s.lamps);pools.opacity=.2*s.lamps;beamMaterial.opacity=.28*s.lamps;
+    city.material.emissiveIntensity=.5*s.windows;hillLights.material.opacity=.75*s.nightLights;hillLights.visible=s.nightLights>.02;
+    seaMaterial.color.set(s.sea);silhouettes.material.color.setRGB(...s.hills);
+  }
+  return {update,setDaylight,setLow(value){low=!!value;},setVisible(value){far.visible=!!value;}};
 }

@@ -65,3 +65,15 @@ test('Agentes citados numa frase da NAYRA: nomes inteiros, sem falso positivo',(
   assert.deepEqual(agentsMentioned('O Leonardo vai variar o canoa amanhã'),[]);
   assert.deepEqual(agentsMentioned(''),[]);
 });
+
+test('Hora do dia: postes e janelas apagados de dia, acesos à noite, e sem salto à meia-noite',async()=>{
+  const {daylight,sunDirection,hourOf}=await import('../daylight.js');
+  assert.equal(daylight(11).lamps,0);assert.equal(daylight(11).windows,0);assert(daylight(11).key>2);
+  assert.equal(daylight(19.1).lamps,1);assert.equal(daylight(23).lamps,1);assert.equal(daylight(3).nightLights,1);
+  assert(daylight(17.8).lamps>0&&daylight(17.8).lamps<1);
+  const before=daylight(23.99),after=daylight(.01);assert.equal(before.haze,after.haze);assert.equal(before.key,after.key);
+  for(let h=0;h<24;h+=.25){const s=daylight(h);assert.match(s.zenith,/^#[0-9a-f]{6}$/);assert.match(s.sea,/^#[0-9a-f]{6}$/);assert(Math.abs(Math.hypot(...s.sun)-1)<1e-9);assert(s.sun[1]>0);}
+  assert(sunDirection(12)[1]>sunDirection(8)[1]&&sunDirection(12)[1]>sunDirection(16)[1]);
+  assert(sunDirection(7)[0]>0&&sunDirection(17)[0]<0);
+  assert.equal(daylight(35).hour,11);assert.equal(hourOf(new Date(2026,10,11,11,30,0)),11.5);
+});
