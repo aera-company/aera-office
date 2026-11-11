@@ -34,7 +34,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   scrim.style.cssText='position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .6s ease;background:linear-gradient(180deg,rgba(8,12,16,.78) 0%,rgba(8,12,16,.6) 46%,rgba(8,12,16,0) 74%)';stage.append(scrim);
   renderer.domElement.addEventListener('webglcontextlost', e => {e.preventDefault();failed=true;onFailure('A renderização 3D foi interrompida. Recarregue a página ou abra a apresentação offline.');});
   const camera = new THREE.PerspectiveCamera(36,width/height,.2,1600);
-  camera.position.set(40,12.5,36);
+  camera.position.set(47,12.5,28);
   const controls = new OrbitControls(camera,renderer.domElement);
   controls.target.set(0,6,0);
   controls.enableDamping = true;
@@ -360,7 +360,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   logo.colorSpace=THREE.SRGBColorSpace;
   const logoMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.65,.407),new THREE.MeshBasicMaterial({map:logo,transparent:true,depthWrite:false}));
   logoMesh.position.set(.5,1.28,3.89);logoMesh.userData.noBatch=true;architecture.add(logoMesh);
-  const leblon=buildLeblon({scene,architecture,box,cylinder,sphere,material,materials,lantern,random,keepClear:[[66,60],[-28,40],[30,40],toWorld(74,46)],anisotropy:Math.min(8,renderer.capabilities.getMaxAnisotropy())});
+  const leblon=buildLeblon({scene,architecture,box,cylinder,sphere,material,materials,lantern,random,keepClear:[[66,60],[76,46],[-28,40],[30,40],toWorld(74,46)],anisotropy:Math.min(8,renderer.capabilities.getMaxAnisotropy())});
   // Cheap ambient contact shadow, independent of the single sun shadow map.
   const shadowCanvas=document.createElement('canvas');shadowCanvas.width=128;shadowCanvas.height=128;
   const sc=shadowCanvas.getContext('2d'),gradient=sc.createRadialGradient(64,64,12,64,64,64);
@@ -386,6 +386,8 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   renderer.shadowMap.needsUpdate=true;
   const views={
     all:{target:[-1,6.6,0],position:[40,12.5,36]},
+    // Entry screen: the title covers the left third, so the camera swings east until the twin peaks rise over the roof.
+    intro:{target:[-1,6.6,0],position:[47,12.5,28]},
     think:{target:[-4.7,6.9,.5],position:[-17,10.3,25]},
     create:{target:[4.7,6.9,.5],position:[20,10.5,25]},
     build:{target:[-5.2,2.6,.5],position:[-17,6.9,25]},
@@ -454,7 +456,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   function focus(zone,instant=false){
     if(!views[zone])return;
     viewMode='orbit';floorMode='all';controls.enabled=true;controls.minDistance=12;controls.maxDistance=110;clearClipping();markZone(zone);frameOffset();
-    const v=views[zone],target=new THREE.Vector3(...v.target),position=new THREE.Vector3(...v.position);
+    const v=zone==='all'&&!exploring?views.intro:views[zone],target=new THREE.Vector3(...v.target),position=new THREE.Vector3(...v.position);
     if(width<=900)position.sub(target).multiplyScalar(zone==='all'?(width<550?1.6:1.2):(width<550?1.75:1.25)).add(target);
     travel(position,target,{instant});
   }
