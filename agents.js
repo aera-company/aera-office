@@ -169,6 +169,8 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
   function wander(actor){
     if(!ambient||workflow||presentation||actor.zone===(selected||null)&&selected!=='all'&&selected)return;
     if(actor.route||time<(actor.nextWander||0))return;
+    // Nobody wanders off in the middle of being presented.
+    if(actor.greet&&time<actor.greet.until+1)return;
     const floor=floorOfY(actor.home.y);
     if(actor.away){actor.away=false;routeTo(actor,actor.home);return;}
     const point=pickWaypoint(random,floor,[actor.rig.position.x,actor.rig.position.z],{maxDistance:6});
@@ -202,6 +204,7 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
         actor.stride+=step/STRIDE_LENGTH*Math.PI*2;gait=Math.sin(actor.stride)*speedEnvelope;
         if(route.elapsed>=route.duration){actor.route=null;actor.speed=0;actor.rig.position.copy(route.to);actor.nextWander=time+(actor.away?6+random()*9:16+random()*22);}
       }else if(seated(actor)){yawToward(actor,actor.seat.look[0]-actor.rig.position.x,actor.seat.look[1]-actor.rig.position.z,dt);
+      }else if(actor.greet&&time<actor.greet.until){yawToward(actor,actor.greet.x-actor.rig.position.x,actor.greet.z-actor.rig.position.z,dt,4);
       }else{const peer=peerOf(actor);const lookX=actor.away?actor.rig.position.x+Math.sin(time*.3+actor.index):(peer?.rig.position.x??actor.look[0]),lookZ=actor.away?actor.rig.position.z+Math.cos(time*.3+actor.index):(peer?.rig.position.z??actor.look[1]);yawToward(actor,lookX-actor.rig.position.x,lookZ-actor.rig.position.z,dt);}
       actor.walking=!!actor.route;
       if(!actor.route&&!actor.away&&!workflow&&!presentation&&actor.rig.position.distanceTo(actor.home)>.05)routeTo(actor,actor.home);
@@ -225,15 +228,40 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
         arm.elbow.rotation.x=-.12-work*(typing?.95:conversing?.85:.7)+work*.04*Math.sin(phase*(typing?4.2:1.7)+side);
       }
       for(const leg of actor.legs){leg.hip.rotation.x=gait*leg.side*.32-1.42*sit;leg.knee.rotation.x=Math.max(0,-gait*leg.side)*.48+1.46*sit;}
+      // Being presented: a short wave of the right hand toward the camera, and the head turned to it. Standing people
+      // turn their body; seated ones only turn the head. It stops if they start walking.
+      const g=actor.greet,greeting=g&&time<g.until+.6&&!actor.walking;
+      const wave=greeting?Math.min(1,(time-g.start)/.45)*Math.min(1,Math.max(0,(g.until+.6-time)/.6)):0;
+      actor.greetWeight=THREE.MathUtils.damp(actor.greetWeight||0,wave,9,dt);
+      const w=actor.greetWeight*actor.greetWeight*(3-2*actor.greetWeight);
+      if(w>.002){
+        const right=actor.arms.find(a=>a.side===-1),swing=Math.sin((time-g.start)*7.5);
+        right.shoulder.rotation.x=THREE.MathUtils.lerp(right.shoulder.rotation.x,-.35,w);
+        right.shoulder.rotation.z=THREE.MathUtils.lerp(right.shoulder.rotation.z,-2.55,w);
+        right.elbow.rotation.x=THREE.MathUtils.lerp(right.elbow.rotation.x,-.25,w);
+        right.elbow.rotation.z=-.5*w+.38*w*swing;
+        const toCamera=Math.atan2(g.x-actor.rig.position.x,g.z-actor.rig.position.z),turn=Math.atan2(Math.sin(toCamera-actor.rig.rotation.y),Math.cos(toCamera-actor.rig.rotation.y));
+        actor.head.rotation.y=THREE.MathUtils.lerp(actor.head.rotation.y,THREE.MathUtils.clamp(turn,-.9,.9),w);
+        actor.head.rotation.z=.08*w*Math.sin((time-g.start)*1.6);actor.spine.rotation.y=THREE.MathUtils.clamp(turn,-.35,.35)*w*(sit>.5?1:.3);
+      }else{for(const arm of actor.arms)arm.elbow.rotation.z=0;actor.head.rotation.z=0;actor.spine.rotation.y=0;if(g&&time>g.until+1)actor.greet=null;}
     }
     writeInstances();return true;
   }
   return {
     update,
+    // NAYRA is presenting this agent and the camera is at (x, z): the agent turns to it and waves for a few seconds.
+    // A stroll is only ambient: it stops where it is so the wave happens. A walk that belongs to a real task goes on.
+    greet(name,x,z,seconds=3.2){
+      const a=actors.find(o=>o.name===name);if(!a||!enabled())return false;
+      if(a.route&&!workflow&&!presentation){a.route=null;a.speed=0;a.walking=false;a.away=true;a.nextWander=time+seconds+4;}
+      a.greet={start:time,until:time+seconds,x,z};invalidate();return true;
+    },
     select(zone){selected=zone;invalidate();},
     setPresentation(active,nextStep=0){const changed=presentation!==active||step!==nextStep;presentation=active;step=Math.max(0,Math.min(5,nextStep));if(!active)presentationPaused=false;if(changed)syncRoutes();invalidate();},
     setPresentationPaused(value){presentationPaused=!!value;last=performance.now();invalidate();},
-    setWorkflow(value){workflow=value;presentationPaused=false;for(const a of actors)a.away=false;syncRoutes();invalidate();},
+    // Only a real change of task moves people; clearing an empty workflow (which happens whenever NAYRA names someone)
+    // must not send everyone walking back to their desks.
+    setWorkflow(value){if(!value&&!workflow){presentationPaused=false;return;}workflow=value;presentationPaused=false;for(const a of actors)a.away=false;syncRoutes();invalidate();},
     setAmbient(value){ambient=!!value;if(!ambient)for(const a of actors){a.away=false;if(!workflow&&!presentation)routeTo(a,a.home);}invalidate();return ambient;},
     // Keyed by room (first occupant) and by name, so a shared room can still point at the right person.
     // Rooms where someone is seated at a keyboard right now: the only places the ambient sound plays typing.
@@ -243,6 +271,6 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
     anchors(){const out={};for(const a of actors){const p=[a.rig.position.x,a.rig.position.y+2.05,a.rig.position.z];out[a.name]=p;if(!out[a.zone])out[a.zone]=p;}return out;},
     setEnabled(value){userEnabled=!!value;last=performance.now();if(enabled())syncRoutes();invalidate();return this.state();},
     state(){return {enabled:enabled(),userEnabled,reducedMotion:media.matches,paused:presentationPaused,rate:24,ambient,away:actors.filter(a=>a.away).map(a=>a.name)};},
-    diagnostics(){return {...this.state(),presentation,step,workflow,updates,clock:+time.toFixed(3),drawCalls:3,actors:actors.map(a=>({name:a.name,zone:a.zone,position:a.rig.position.toArray(),home:a.home.toArray(),walking:a.walking,speed:+a.speed.toFixed(3),sit:+a.sit.toFixed(2),footClearance:a.legs.map(leg=>+footClearance(a,leg.foot).toFixed(4)),head:a.head.rotation.toArray().slice(0,3),activity:+a.activityWeight.toFixed(3)}))};}
+    diagnostics(){return {...this.state(),presentation,step,workflow,updates,clock:+time.toFixed(3),drawCalls:3,actors:actors.map(a=>({name:a.name,zone:a.zone,position:a.rig.position.toArray(),home:a.home.toArray(),walking:a.walking,speed:+a.speed.toFixed(3),sit:+a.sit.toFixed(2),greet:+(a.greetWeight||0).toFixed(2),footClearance:a.legs.map(leg=>+footClearance(a,leg.foot).toFixed(4)),head:a.head.rotation.toArray().slice(0,3),activity:+a.activityWeight.toFixed(3)}))};}
   };
 }

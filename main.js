@@ -513,6 +513,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     driftSpherical.set(radius,phi,theta);
     const position=new THREE.Vector3().setFromSpherical(driftSpherical).add(target);
     travel(position,target,{duration:1700});
+    team.greet(name,position.x,position.z);
     if(orbit&&!motion.matches)drift={target,radius,phi,theta,phase:0,speed:0,on:true,start:performance.now()+1700};
     return true;
   }
