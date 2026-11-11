@@ -422,6 +422,31 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     interiorDay=s.interior;lantern.color.lerpColors(lanternOff,lanternOn,s.lamps);
     pool.color.set(s.sea).lerp(poolBase,.35);
     leblon.setDaylight(s);applyLights();renderer.shadowMap.needsUpdate=true;dirty=true;
+    // The page reads this to adjust its veils, so the text stays readable over a bright scene.
+    document.documentElement.style.setProperty('--day',s.bright.toFixed(3));
+    if(thumbnailsReady&&Math.abs(sceneHour-thumbnailHour)>=.25)renderThumbnails();
+  }
+  // The room thumbnails on the entry screen are rendered from the scene itself, so they always show the current light.
+  // The image files stay as the fallback for when the 3D scene is not available.
+  const thumbnailCanvas=document.createElement('canvas');thumbnailCanvas.width=480;thumbnailCanvas.height=300;
+  const thumbnailContext=thumbnailCanvas.getContext('2d'),thumbnailCamera=new THREE.PerspectiveCamera(36,1,.2,1600);
+  let thumbnailsReady=false,thumbnailHour=-99;
+  function renderThumbnails(){
+    const strip=document.querySelector('#room-strip'),canvas=renderer.domElement,cw=canvas.width,ch=canvas.height;
+    if(!strip||failed||!cw||!ch||renderer.clippingPlanes.length)return;
+    try{
+      let sw=cw,sh=cw/1.6;if(sh>ch){sh=ch;sw=ch*1.6;}
+      const shown=Object.values(accents).map(g=>g.visible);Object.values(accents).forEach(g=>{g.visible=false;});
+      for(const zone of Object.keys(roomSpecs)){
+        const image=strip.querySelector(`button[data-zone="${zone}"] img`),v=views[zone];if(!image||!v)continue;
+        thumbnailCamera.aspect=cw/ch;thumbnailCamera.position.set(...v.position);thumbnailCamera.lookAt(...v.target);thumbnailCamera.updateProjectionMatrix();
+        renderer.render(scene,thumbnailCamera);
+        thumbnailContext.drawImage(canvas,(cw-sw)/2,(ch-sh)/2,sw,sh,0,0,480,300);
+        image.src=thumbnailCanvas.toDataURL('image/jpeg',.82);
+      }
+      Object.values(accents).forEach((g,i)=>{g.visible=shown[i];});
+      renderer.render(scene,camera);thumbnailHour=sceneHour;dirty=true;
+    }catch(error){console.warn('AERA: miniaturas não atualizadas',error);}
   }
   function setHour(hour){fixedHour=Number.isFinite(hour)?hour:null;applyDaylight();return sceneHour;}
   applyDaylight();setInterval(()=>{if(fixedHour===null&&!document.hidden)applyDaylight();},60000);
@@ -642,7 +667,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     skipIntro.style.cssText='position:fixed;right:36px;top:92px;z-index:60;padding:11px 16px;background:#0f1c23cc;border:1px solid #ffffff3d;color:#eee9df;font:500 12px/1 "Instrument Sans Variable","Helvetica Neue",sans-serif;letter-spacing:.04em;cursor:pointer;backdrop-filter:blur(6px);border-radius:2px';
     skipIntro.addEventListener('click',()=>{travel(hero,heroTarget,{instant:true});});document.body.append(skipIntro);
   }
-  renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();requestAnimationFrame(frame);
+  renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();thumbnailsReady=true;renderThumbnails();requestAnimationFrame(frame);
   const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
   return {
     focus,enter,setFloor,setWorkflow,setStations,setStationStates,setCharacterStates,
