@@ -174,6 +174,39 @@ $('#open-brief').onclick=()=>$('#brief-panel').hidden?openBrief():closeBrief();$
 $('#zoom-in').onclick=()=>office?.zoom(.84);$('#zoom-out').onclick=()=>office?.zoom(1.18);
 function syncMotion(state){$('#agent-motion').textContent=state.reducedMotion?'Agentes em pausa':state.userEnabled?'Agentes animados':'Agentes em pausa';$('#agent-motion').setAttribute('aria-pressed',String(state.enabled));}
 $('#agent-motion').onclick=()=>{if(office)syncMotion(office.toggleAgentMotion());};
+// Ambient sound (ambience.js): off until the visitor turns it on; the choice is remembered on this device, and a
+// remembered "on" waits for the first click or key, because browsers only start sound after an interaction.
+let ambience=null,ambienceOn=false,ambienceTimer=0,nayraTalking=false;
+// A speaker icon: with waves when the sound is on, crossed out when it is off.
+const SPEAKER='<path d="M3 9.5h3.2L10.5 6v12l-4.3-3.5H3z" fill="currentColor" stroke="none"/>';
+function syncAmbience(){
+  const b=$('#ambience');b.setAttribute('aria-pressed',String(ambienceOn));b.setAttribute('aria-label',ambienceOn?'Desligar som ambiente':'Ligar som ambiente');b.title=ambienceOn?'Som ambiente ligado':'Som ambiente desligado';
+  b.innerHTML=`<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">${SPEAKER}${ambienceOn?'<path d="M14 9.2a4 4 0 0 1 0 5.6M16.6 6.8a7.4 7.4 0 0 1 0 10.4"/>':'<path d="M14.5 9.5l5 5M19.5 9.5l-5 5"/>'}</svg>`;
+}
+function tickAmbience(){
+  if(!ambience||!office)return;
+  const talking=document.body.classList.contains('nayra-live-on')?(nayraTalking?1:.55):0;
+  ambience.mix({...office.listener(),ducked:talking});ambience.schedule(ambience.context.currentTime+2.5);
+}
+async function setAmbience(on){
+  ambienceOn=on;try{localStorage.setItem('aera-ambience',on?'1':'0');}catch{}
+  syncAmbience();
+  if(on){
+    if(!ambience){
+      const Context=window.AudioContext||window.webkitAudioContext;if(!Context){ambienceOn=false;syncAmbience();return;}
+      const {createAmbience}=await import('./ambience.js');ambience=createAmbience(new Context());
+    }
+    try{await ambience.context.resume();}catch{}
+    tickAmbience();ambience.fadeTo(.6,1.6);clearInterval(ambienceTimer);ambienceTimer=setInterval(tickAmbience,400);
+  }else if(ambience){
+    ambience.fadeTo(0,.6);clearInterval(ambienceTimer);setTimeout(()=>{if(!ambienceOn)ambience.context.suspend().catch(()=>{});},1200);
+  }
+}
+$('#ambience').onclick=()=>setAmbience(!ambienceOn);
+window.addEventListener('aera:agent-presented',e=>{nayraTalking=!!e.detail?.speaking;});
+document.addEventListener('visibilitychange',()=>{if(!ambience||!ambienceOn)return;if(document.hidden)ambience.context.suspend().catch(()=>{});else ambience.context.resume().catch(()=>{});});
+try{if(localStorage.getItem('aera-ambience')==='1'){const once=e=>{if(e.target?.closest?.('#ambience'))return;window.removeEventListener('pointerdown',once,true);window.removeEventListener('keydown',once,true);setAmbience(true);};window.addEventListener('pointerdown',once,true);window.addEventListener('keydown',once,true);}}catch{}
+syncAmbience();
 $('#quality').onclick=()=>{if(office)syncQuality(office.toggleQuality());};
 function syncQuality(low){$('#quality').textContent=`Qualidade: ${low?'leve':'alta'}`;$('#quality').setAttribute('aria-pressed',String(low));}
 $('#fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{$('#navigation-hint').textContent='Use a tela cheia do navegador para ampliar.';}};
@@ -332,5 +365,5 @@ async function boot(){
     const hash=location.hash.slice(1);if(hash.startsWith('inside-floor-')&&floorSpecs[hash.slice(13)]){interior=true;setMode('walk');office.enter('control',true);chooseFloor(hash.slice(13));}else if(hash.startsWith('floor-')&&floorSpecs[hash.slice(6)])chooseFloor(hash.slice(6));else if(hash.startsWith('inside-')&&rooms[hash.slice(7)])enterRoom(hash.slice(7));else if(rooms[hash])selectZone(hash,{instant:true});else if(hash==='tour')startTour();else if(hash==='explore')explore();
   }catch(error){clearTimeout(loadTimer);console.error('AERA: cena indisponível',error);fallback(VITRINE?'Navegação 3D não disponível neste navegador.':'WebGL não disponível. Abra os registros offline para apresentar sem renderização 3D.');}
 }
-window.aera={selectZone,startTour,enterRoom,nayra,voz,poseFace:pose=>poseFace($('#agent-monogram'),pose),inspectAgent:(name,options)=>office?.inspectAgent(name,options),peek:(position,target,fov)=>office?.peek(position,target,fov),get state(){return {selected,mode,floor,interior,working,visualMode,ready:!!office,tour:{active:tour.active,paused:tour.paused,index:tour.index}};},get diagnostics(){return office?.diagnostics();}};
+window.aera={selectZone,startTour,enterRoom,nayra,voz,poseFace:pose=>poseFace($('#agent-monogram'),pose),inspectAgent:(name,options)=>office?.inspectAgent(name,options),ambience:()=>office?.listener(),peek:(position,target,fov)=>office?.peek(position,target,fov),get state(){return {selected,mode,floor,interior,working,visualMode,ready:!!office,tour:{active:tour.active,paused:tour.paused,index:tour.index}};},get diagnostics(){return office?.diagnostics();}};
 boot();

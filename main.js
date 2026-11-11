@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import {createSky,buildLeblon,HAZE,toWorld} from './leblon.js';
+import {createSky,buildLeblon,HAZE,toWorld,SITE_YAW,shore} from './leblon.js';
 import {daylight,hourOf} from './daylight.js';
 
 // Real procedural architecture. No AI services, panorama geometry or remote assets.
@@ -517,6 +517,15 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     return true;
   }
   function settleDrift(){if(drift)drift.on=false;}
+  // What the ambient sound needs to know about where the visitor is: how close the sea and the avenue are, whether
+  // they are inside a room, whether someone in that room is typing, and how busy the street is at this hour.
+  function listener(){
+    const c=Math.cos(SITE_YAW),s=Math.sin(SITE_YAW),x=camera.position.x,z=camera.position.z,siteZ=x*s+z*c;
+    const toSea=Math.max(0,shore.sea-siteZ)+Math.max(0,camera.position.y-2)*.6,toAvenue=Math.abs(siteZ-34)+Math.max(0,camera.position.y-2)*.4;
+    const inside=viewMode==='walk',hour=sceneHour;
+    return {sea:THREE.MathUtils.clamp(1.15-toSea/110,.14,1),city:THREE.MathUtils.clamp(1-toAvenue/75,.2,.85),inside,
+      typing:inside&&team.typingZones().includes(currentZone),traffic:hour>=6.5&&hour<22?.8:hour>=5.5&&hour<23.5?.45:.2};
+  }
   // Test hook: any camera position and target, in site coordinates (+z out to sea), to check the surroundings.
   function peek(position,target,fov=40){
     const [px,pz]=toWorld(position[0],position[2]),[tx,tz]=toWorld(target[0],target[2]);
@@ -711,7 +720,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();thumbnailsReady=true;renderThumbnails();requestAnimationFrame(frame);
   const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
   return {
-    focus,enter,setFloor,showAgent,settleDrift,inspectAgent,peek,setWorkflow,setStations,setStationStates,setCharacterStates,
+    focus,enter,setFloor,showAgent,settleDrift,inspectAgent,peek,listener,setWorkflow,setStations,setStationStates,setCharacterStates,
     selectStation(id){selectedStation=id||'';dirty=true;},
     setAmbient(value){return team.setAmbient(value);},
     setLights,lights(){return lightTarget===1;},setHour,

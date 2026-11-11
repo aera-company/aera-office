@@ -236,6 +236,8 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
     setWorkflow(value){workflow=value;presentationPaused=false;for(const a of actors)a.away=false;syncRoutes();invalidate();},
     setAmbient(value){ambient=!!value;if(!ambient)for(const a of actors){a.away=false;if(!workflow&&!presentation)routeTo(a,a.home);}invalidate();return ambient;},
     // Keyed by room (first occupant) and by name, so a shared room can still point at the right person.
+    // Rooms where someone is seated at a keyboard right now: the only places the ambient sound plays typing.
+    typingZones(){return [...new Set(actors.filter(a=>a.activity==='keyboard'&&a.sit>.5).map(a=>a.zone))];},
     // Where an agent's head is and which way the body faces: used to frame a close-up.
     headOf(name){const a=actors.find(x=>x.name===name);if(!a)return null;root.updateMatrixWorld(true);const p=a.head.getWorldPosition(new THREE.Vector3());return {head:p.toArray(),yaw:a.rig.rotation.y};},
     anchors(){const out={};for(const a of actors){const p=[a.rig.position.x,a.rig.position.y+2.05,a.rig.position.z];out[a.name]=p;if(!out[a.zone])out[a.zone]=p;}return out;},
