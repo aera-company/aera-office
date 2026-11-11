@@ -39,3 +39,24 @@ export function leaveCommand(text){
   const t=norm(text);
   return /\b(sai|sair|saia|volta|voltar|volte)\b.{0,24}\b(sala|fora|predio|edificio|visao geral|lado de fora)\b/.test(t);
 }
+
+// Exact timing of a spoken reply. The voice stream delivers the audio in chunks, each with its characters and when each
+// one is spoken inside the chunk; `push` joins them into one timeline and returns the agents named in the new part, with
+// the moment (in ms from the start of the reply) their name begins. A name cut between two chunks is found on the next.
+const SPOKEN={ari:'ARI',maya:'MAYA',noa:'NOA',john:'JOHN',jon:'JOHN',leo:'LEO',nina:'NINA'};
+export function createSpeechTimeline(){
+  let text='',times=[],offset=0,from=0;
+  const flat=ch=>{const c=ch.toLowerCase().normalize('NFD')[0]||' ';return /[a-z0-9]/.test(c)?c:' ';};
+  return {
+    get duration(){return offset;},
+    push(alignment){
+      const chars=alignment?.chars||[],starts=alignment?.char_start_times_ms||[],lasts=alignment?.char_durations_ms||[],found=[];
+      if(!chars.length)return found;
+      for(let i=0;i<chars.length;i++)for(const ch of String(chars[i])){text+=flat(ch);times.push(offset+(starts[i]||0));}
+      const end=chars.length-1;offset+=(starts[end]||0)+(lasts[end]||0);
+      const names=/(^| )(ari|maya|noa|john|jon|leo|nina) /g;names.lastIndex=from;
+      for(let m;(m=names.exec(text));){const at=m.index+m[1].length;found.push({name:SPOKEN[m[2]],at:times[at]});from=at+m[2].length;names.lastIndex=from;}
+      return found;
+    }
+  };
+}

@@ -1,5 +1,5 @@
 import {VITRINE} from './vitrine.js';
-import {lightsCommand,agentMentions,enterCommand,leaveCommand} from './commands.js';
+import {lightsCommand,agentMentions,enterCommand,leaveCommand,createSpeechTimeline} from './commands.js';
 // NAYRA by voice (C49 to C60): presentation mode, the "Oi, NAYRA" listener and the live conversation with the ElevenLabs agent.
 // The listener is the browser's speech recognition (audio goes to Google in Chrome, Apple in Safari) and only waits for phrases.
 // The conversation itself runs on the ElevenLabs agent; credits are spent only while it is open.
@@ -136,9 +136,10 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,prese
           else if(farewell)setTimeout(()=>endConversation('despedida'),900);
           else armSilence();
         },
+        onAudioAlignment(alignment){heard(alignment);},
         onMessage(m){
           const role=m.role||(m.source==='ai'?'agent':'user');
-          if(role==='user'){caption('cliente',m.message);armSilence();lights(m.message);rooms(m.message);const t=norm(m.message);if(NAME.test(t)&&/\b(obrigad[oa]|tchau|ate mais|encerra|pode encerrar)\b/.test(t))farewell=true;}
+          if(role==='user'){reply=null;caption('cliente',m.message);armSilence();lights(m.message);rooms(m.message);const t=norm(m.message);if(NAME.test(t)&&/\b(obrigad[oa]|tchau|ate mais|encerra|pode encerrar)\b/.test(t))farewell=true;}
           // Expressive voice tags such as [warm] guide the voice; they are not shown on screen.
           else{const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();caption('nayra',said);react(said);walkThrough(said);if(!agentSpoke){agentSpoke=true;report('agente respondeu',m.message.slice(0,70));}}
         }
@@ -167,7 +168,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,prese
   }
   function finish(){
     convo=null;clearTimeout(silenceTimer);clearTimeout(maxTimer);cancelAnimationFrame(raf);
-    live().hidden=true;document.body.classList.remove('nayra-live-on');$('#nayra-live-orb').classList.remove('speaking');for(const t of followTimers)clearTimeout(t);followTimers=[];lastAgent='';present([],false);settle();
+    live().hidden=true;document.body.classList.remove('nayra-live-on');$('#nayra-live-orb').classList.remove('speaking');for(const t of followTimers)clearTimeout(t);followTimers=[];clearTimeout(quietTimer);lastAgent='';reply=null;present([],false);settle();
     indicator();setTimeout(startListening,600);
   }
 
@@ -187,17 +188,41 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,prese
     if(names)presentedNames=names;if(isSpeaking!==undefined)nayraSpeaking=isSpeaking;
     window.dispatchEvent(new CustomEvent('aera:agent-presented',{detail:{names:presentedNames,speaking:nayraSpeaking}}));
   }
-  // Her whole reply arrives at once; the office walks through the agents she names in the order and at roughly the pace
-  // she says them (about 3 words a second, counted from when her voice started). Each one gets the card, the camera
-  // and, while she speaks, the face.
+  // Each agent she names gets the card, the camera and, while she speaks, the face, at the moment the name is spoken.
+  // The voice stream says when each character is said (audio alignment), so the timing is exact: `heard` builds the
+  // timeline of the reply and schedules each name a little ahead, for the card to be there as she says it.
+  // `trace` keeps the last timings in memory, to check the sync after a conversation. No audio, no transcript.
+  const LEAD=420,trace=[];let reply=null;
+  function mark(entry){trace.push({at:Math.round(performance.now()),...entry});if(trace.length>160)trace.shift();}
+  function show(name,conversation){if(conversation&&conversation!==convo&&conversation!==testConvo)return;mark({shown:name});if(name!==lastAgent){lastAgent=name;presentAgent(name);}present([name]);}
+  function heard(alignment,conversation=convo){
+    const now=performance.now();
+    if(!reply||(reply.ended&&now-reply.ended>1500)){reply={timeline:createSpeechTimeline(),base:now,ended:0,exact:false};mark({reply:'início'});}
+    if(!reply.exact){reply.exact=true;for(const t of followTimers)clearTimeout(t);followTimers=[];}
+    for(const {name,at} of reply.timeline.push(alignment)){
+      const wait=reply.base+at-LEAD-performance.now();mark({name,spokenAt:Math.round(at),wait:Math.round(wait)});
+      followTimers.push(setTimeout(()=>show(name,conversation),Math.max(0,wait)));
+    }
+  }
+  // Fallback for a voice stream without alignment: her whole reply arrives at once, and the office estimates the pace
+  // (about 3 words a second, counted from when her voice started). Dropped as soon as the exact timing shows up.
   function walkThrough(said,conversation=convo){
+    if(reply?.exact&&!reply.ended)return;
     for(const t of followTimers)clearTimeout(t);followTimers=[];
     const mentions=agentMentions(said);if(!mentions.length)return;
     const seconds=String(said).trim().split(/\s+/).length/3,already=nayraSpeaking&&speakingSince?performance.now()-speakingSince:0;
-    for(const {name,at} of mentions)followTimers.push(setTimeout(()=>{if(conversation&&conversation!==convo&&conversation!==testConvo)return;if(name!==lastAgent){lastAgent=name;presentAgent(name);}present([name]);},Math.max(0,at*seconds*1000-already-200)));
+    for(const {name,at} of mentions)followTimers.push(setTimeout(()=>show(name,conversation),Math.max(0,at*seconds*1000-already-200)));
   }
   let speakingSince=0;
-  function speaking(on){if(on&&!nayraSpeaking)speakingSince=performance.now();present(undefined,on);if(!on)settle();}
+  // On a live call her voice state flickers off in the short pauses between sentences; the office only treats her as
+  // done after 700 ms of silence, so the face and the camera do not stop and restart in the middle of a reply.
+  let quietTimer=0;
+  function speaking(on){
+    mark(on||!reply?{speaking:on}:{speaking:on,replyStart:Math.round(reply.base),replyAudioMs:Math.round(reply.timeline.duration)});
+    clearTimeout(quietTimer);
+    if(on){if(!nayraSpeaking)speakingSince=performance.now();if(reply)reply.ended=0;present(undefined,true);return;}
+    quietTimer=setTimeout(()=>{if(reply)reply.ended=performance.now();present(undefined,false);settle();},700);
+  }
   function rooms(text,conversation=convo){
     const zone=enterCommand(text);
     if(zone&&enterRoom(zone)){try{conversation?.sendContextualUpdate('A pessoa pediu e a tela entrou na sala.');}catch{}return;}
@@ -256,6 +281,7 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,prese
     const c=await Conversation.startSession({...(session.signed_url?{signedUrl:session.signed_url}:{agentId:session.agent_id}),textOnly,connectionType:'websocket',
       dynamicVariables:{estado_escritorio:context.text,cliente:context.client},
       onMessage(m){const role=m.role||(m.source==='ai'?'agent':'user');log.push({role,text:m.message,at:Math.round(performance.now())});if(role!=='user'){const said=String(m.message||'').replace(/\[[a-zà-ú ]{2,24}\]\s*/gi,'').trim();react(said);walkThrough(said,testConvo);log.push({zone:lastZone,card:$('#nayra-live-card').dataset.job||''});if(textOnly)turn?.('ok');}},
+      onAudioAlignment(alignment){heard(alignment,testConvo);},
       onModeChange({mode}){log.push({mode,at:Math.round(performance.now())});speaking(mode==='speaking');if(mode==='listening'&&!textOnly)turn?.('ok');},
       onConnect(p){log.push({connected:p?.conversationId||true});},
       onDisconnect(d){log.push({disconnected:JSON.parse(JSON.stringify(d||{}))});turn?.('closed');},
@@ -263,10 +289,10 @@ export function initNayraVoz({api,briefing,closeBriefing=()=>{},selectZone,prese
     testConvo=c;lastAgent='';
     if(!textOnly){try{c.setMicMuted(true);}catch{}}
     await first;brief(c);
-    for(const q of questions){const r=next();lights(q,c);rooms(q,c);c.sendUserMessage(q);if(await r!=='ok')break;}
+    for(const q of questions){const r=next();reply=null;lights(q,c);rooms(q,c);c.sendUserMessage(q);if(await r!=='ok')break;}
     testConvo=null;speaking(false);
     try{await c.endSession();}catch{}
     return log;
   }
-  return {hear,converse,publicTalk,follow,walkThrough:said=>walkThrough(said,null),speaking,textTest,endConversation,setPresentation,get presenting(){return presenting;},get listening(){return listening;},get talking(){return !!convo;}};
+  return {hear,converse,publicTalk,follow,walkThrough:said=>walkThrough(said,null),heard:alignment=>heard(alignment,null),get trace(){return trace.slice();},speaking,textTest,endConversation,setPresentation,get presenting(){return presenting;},get listening(){return listening;},get talking(){return !!convo;}};
 }

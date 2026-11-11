@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {layoutStations,pickWaypoint,floorOfY,roomSpecs,routeTiming,routeProgress,WALK_SPEED} from '../stations.js';
-import {lightsCommand,agentsMentioned,agentMentions,enterCommand,leaveCommand} from '../commands.js';
+import {lightsCommand,agentsMentioned,agentMentions,enterCommand,leaveCommand,createSpeechTimeline} from '../commands.js';
 import {isWalkable,floorSpecs} from '../navigation.js';
 
 const registry=JSON.parse(readFileSync(new URL('../scripts/office/capabilities.json',import.meta.url),'utf8'));
@@ -88,4 +88,16 @@ test('NAYRA apresentando a equipe: agentes na ordem da fala, entrar e sair da sa
   assert.equal(enterCommand('entra na sala'),'current');
   for(const t of ['Não precisa entrar na sala','Como está a entrega da MAYA?','Me mostra a MAYA','A NINA entrou em contato'])assert.equal(enterCommand(t),null,t);
   assert.equal(leaveCommand('sai da sala, por favor'),true);assert.equal(leaveCommand('volta para fora do prédio'),true);assert.equal(leaveCommand('a MAYA volta amanhã'),false);
+});
+
+test('Sincronia da fala: o nome do agente sai com o instante exato em que é dito, mesmo cortado entre trechos',()=>{
+  const chunk=(text,per=60)=>({chars:[...text],char_start_times_ms:[...text].map((_,i)=>i*per),char_durations_ms:[...text].map(()=>per)});
+  const t=createSpeechTimeline();
+  assert.deepEqual(t.push(chunk('Começando pela ARI, que coordena. ')),[{name:'ARI',at:15*60}]);
+  const first=t.duration;assert.equal(first,34*60);
+  assert.deepEqual(t.push(chunk('Depois a MA')),[]);
+  assert.deepEqual(t.push(chunk('YA, e o Leonardo não conta, mas o LEO sim.')),[{name:'MAYA',at:first+9*60},{name:'LEO',at:first+11*60+34*60}]);
+  assert.deepEqual(t.push(chunk(' Por fim a NINA')),[]);
+  assert.deepEqual(t.push(chunk('.')).map(x=>x.name),['NINA']);
+  assert.deepEqual(createSpeechTimeline().push({chars:[]}),[]);
 });
