@@ -517,6 +517,14 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     return true;
   }
   function settleDrift(){if(drift)drift.on=false;}
+  // Test hook: a close-up in front of an agent's face, to check the figure against the portrait.
+  function inspectAgent(name,{angle=.45,distance=1.9}={}){
+    const h=team.headOf(name);if(!h)return false;
+    viewMode='orbit';floorMode='all';controls.enabled=true;controls.minDistance=.8;clearClipping();markZone('all');camera.clearViewOffset();
+    const target=new THREE.Vector3(h.head[0],h.head[1]-.12,h.head[2]);
+    travel(new THREE.Vector3(target.x+Math.sin(h.yaw+angle)*distance,target.y+.22,target.z+Math.cos(h.yaw+angle)*distance),target,{instant:true});
+    return true;
+  }
   function tickDrift(now,delta){
     if(!drift||transition||now<drift.start)return false;
     const dt=Math.min(.05,delta/1000);drift.speed+=((drift.on?1:0)-drift.speed)*Math.min(1,dt*1.4);
@@ -696,7 +704,7 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
   renderer.compile(scene,camera);renderer.render(scene,camera);updateLabels();thumbnailsReady=true;renderThumbnails();requestAnimationFrame(frame);
   const gl=renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info');
   return {
-    focus,enter,setFloor,showAgent,settleDrift,setWorkflow,setStations,setStationStates,setCharacterStates,
+    focus,enter,setFloor,showAgent,settleDrift,inspectAgent,setWorkflow,setStations,setStationStates,setCharacterStates,
     selectStation(id){selectedStation=id||'';dirty=true;},
     setAmbient(value){return team.setAmbient(value);},
     setLights,lights(){return lightTarget===1;},setHour,
