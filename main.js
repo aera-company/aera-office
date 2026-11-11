@@ -589,10 +589,11 @@ export async function createOffice({selectZone,onFailure,onQuality,onNavigation=
     travel(new THREE.Vector3(px,position[1],pz),new THREE.Vector3(tx,target[1],tz),{instant:true,fov});return true;
   }
   // Test hook: a close-up in front of an agent's face, to check the figure against the portrait.
-  function inspectAgent(name,{angle=.45,distance=1.9}={}){
+  // `drop` lowers the aim from the head: about .9 frames the whole figure. `zone` keeps a room at work while looking.
+  function inspectAgent(name,{angle=.45,distance=1.9,drop=.12,zone='all'}={}){
     const h=team.headOf(name);if(!h)return false;
-    viewMode='orbit';floorMode='all';controls.enabled=true;controls.minDistance=.8;clearClipping();markZone('all');camera.clearViewOffset();
-    const target=new THREE.Vector3(h.head[0],h.head[1]-.12,h.head[2]);
+    viewMode='orbit';floorMode='all';controls.enabled=true;controls.minDistance=.8;clearClipping();markZone(zone);camera.clearViewOffset();
+    const target=new THREE.Vector3(h.head[0],h.head[1]-drop,h.head[2]);
     travel(new THREE.Vector3(target.x+Math.sin(h.yaw+angle)*distance,target.y+.22,target.z+Math.cos(h.yaw+angle)*distance),target,{instant:true});
     return true;
   }
