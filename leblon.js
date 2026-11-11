@@ -481,12 +481,27 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
     const boat=new THREE.Group(),lamp=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),mastLight);lamp.position.set(geometry===fishing?-1.2:.3,geometry===fishing?3.9:9.5,0);
     boat.add(new THREE.Mesh(geometry,seaPaint),lamp);boat.position.set(start,-.35,z);boat.userData={speed,start,phase:i*2.3};far.add(boat);return boat;
   });
-  // Gulls: a body and two wings that flap in the vertex shader, each bird on its own beat.
+  // Gulls: a white body with a short tail, long narrow wings, pale grey above and black at the tips, bent at the wrist.
+  // The wings flap in the vertex shader (the outer half more than the inner), each bird on its own beat. They are lit
+  // flat, white against the sky, so a bird seen from below does not turn into a dark shape.
+  const gullPoints=[],gullColors=[];
+  {const white=[.95,.95,.93],grey=[.78,.8,.81],tip=[.16,.17,.18];
+  const tri=(a,b,c,rgb)=>{gullPoints.push(...a,...b,...c);for(let i=0;i<3;i++)gullColors.push(...rgb);};
+  const nose=[0,0,.3],tail=[0,0,-.22],top=[0,.045,0],belly=[0,-.04,0];
+  for(const s of [-1,1]){
+    const side=[s*.055,0,.02];
+    tri(nose,side,top,white);tri(tail,side,top,white);tri(nose,side,belly,white);tri(tail,side,belly,white);
+    // Inner wing from the body to the wrist, swept a little back, then the outer hand and the black tip.
+    const root=[s*.05,0,.09],rootBack=[s*.05,0,-.07],wrist=[s*.36,.035,.03],wristBack=[s*.36,.035,-.09],hand=[s*.56,.02,-.07],end=[s*.7,0,-.13];
+    tri(root,rootBack,wrist,grey);tri(rootBack,wristBack,wrist,grey);
+    tri(wrist,wristBack,hand,grey);tri(wrist,hand,end,tip);
+  }
+  tri([0,0,-.18],[-.07,0,-.33],[.07,0,-.33],white);}
   const gullGeometry=new THREE.BufferGeometry();
-  gullGeometry.setAttribute('position',new THREE.Float32BufferAttribute([0,0,.35, 0,0,-.3, -1,.05,0, 0,0,.35, 1,.05,0, 0,0,-.3],3));gullGeometry.computeVertexNormals();
-  const gullMaterial=new THREE.MeshLambertMaterial({color:'#eceae4',side:THREE.DoubleSide});
+  gullGeometry.setAttribute('position',new THREE.Float32BufferAttribute(gullPoints,3));gullGeometry.setAttribute('color',new THREE.Float32BufferAttribute(gullColors,3));
+  const gullMaterial=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide});
   gullMaterial.onBeforeCompile=shader=>{shader.uniforms.time=gust.time;
-    shader.vertexShader='uniform float time;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n      transformed.y+=abs(transformed.x)*.5*sin(time*7.+instanceMatrix[3].x*1.7+instanceMatrix[3].z);');};
+    shader.vertexShader='uniform float time;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n      float ax=abs(transformed.x);transformed.y+=(ax*.45+max(ax-.36,0.)*.6)*sin(time*6.5+instanceMatrix[3].x*1.7+instanceMatrix[3].z);');};
   gullMaterial.customProgramCacheKey=()=>'aera-gull';
   const gullPaths=Array.from({length:9},(_,i)=>({cx:-70+i*18+random()*8,cz:shore.sea-6+random()*16,r:9+random()*14,y:5+random()*6,w:(random()<.5?-1:1)*(.18+random()*.12),a:random()*Math.PI*2}));
   const gulls=new THREE.InstancedMesh(gullGeometry,gullMaterial,gullPaths.length);gulls.name='AERA_GULLS';
@@ -566,6 +581,8 @@ export function buildLeblon({scene,architecture,box,cylinder,sphere,material,mat
     ocean.setDaylight(s);silhouettes.material.color.setRGB(...s.hills);
     // Surfers and gulls are out by day only, and not in the rain; boat lamps come on with the street lamps.
     surfers.visible=s.bright>.12&&!(s.rain>.5);gulls.visible=s.bright>.2&&!s.rain;mastLight.opacity=s.lamps;
+    // Flat-lit gulls still follow the light: a little dimmer late in the day.
+    gullMaterial.color.setScalar(.62+.38*Math.min(1,s.bright/.8));
     // Weather (see weather.js): wind in the plants and on the sea, rain falling, the ground wet.
     const wind=s.wind??.25,wet=s.rain?Math.min(1,.45+s.rain):0;
     gust.wind.value=wind;gust.windDir.value.copy(downwind(s.windFrom??160));rainUniforms.drift.value.copy(gust.windDir.value).multiplyScalar(.6+5.5*wind);
