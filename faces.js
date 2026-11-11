@@ -12,7 +12,7 @@ const images={
 // Measured on each portrait, as fractions of the image: eyes [x, y, half width, half height], mouth [x, y, half width],
 // crop [centre x, centre y, size] and the lid colour sampled from the skin under each eye.
 const marks={
-  MAYA:{eyes:[[.382,.418,.066,.027],[.612,.418,.066,.027]],mouth:[.5,.578,.071],crop:[.5,.43,.78],lid:['#885131','#a7795c']},
+  MAYA:{eyes:[[.4,.34,.047,.028],[.6,.34,.048,.028]],mouth:[.498,.468,.057],crop:[.5,.36,.72],lid:['#aa6c4e','#c38f78']},
   NOA:{eyes:[[.398,.35,.05,.029],[.605,.35,.05,.029]],mouth:[.502,.488,.055],crop:[.5,.37,.74],lid:['#8a5834','#b0835b']},
   JOHN:{eyes:[[.42,.42,.036,.019],[.562,.418,.036,.019]],mouth:[.495,.575,.07],crop:[.49,.4,.8],lid:['#6c422f','#3e1d10']},
   LEO:{eyes:[[.432,.302,.034,.02],[.57,.302,.034,.02]],mouth:[.5,.433,.05],crop:[.5,.33,.66],lid:['#915e42','#c4967a']},

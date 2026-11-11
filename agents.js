@@ -10,7 +10,7 @@ export function createAgentTeam({scene, contactMaterial, onInvalidate=()=>{}}) {
   const parts={capsule:[],sphere:[],shadow:[]},actors=[];
   const material=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.87,metalness:0});
   const specs=[
-    {name:'MAYA',zone:'think',home:[-3.0,5.07,1.55],work:[-3.0,5.07,.4],look:[-5.8,-.7],color:'#59665c',activity:'table',skin:'#a9805f',hair:'#2a1d17',style:'long',pants:'#2b3338'},
+    {name:'MAYA',zone:'think',home:[-3.0,5.07,1.55],work:[-3.0,5.07,.4],look:[-5.8,-.7],color:'#59665c',activity:'table',skin:'#cfa283',hair:'#14110f',style:'full',pants:'#1f2326'},
     {name:'NOA',zone:'create',home:[3.0,5.07,2.65],work:[3.0,5.07,1.4],look:[5.6,.7],color:'#99866c',activity:'table',skin:'#c9a184',hair:'#3a2a1e',style:'short',pants:'#29373e'},
     // A `seat` marks the spot (home or work) where the person sits on the chair that is already there, facing the desk.
     // JOHN shares the Create room with NOA: his own desk at the back wall, the worktable when a batch or a review involves him.
